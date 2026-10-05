@@ -8,6 +8,14 @@
 </style></head>
 <body><div id="wrap"></div>
 <script type="module">
+  const glContexts = [];
+  const origGetContext = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function(type, ...args) {
+    const ctx = origGetContext.call(this, type, ...args);
+    if (ctx && (type === 'webgl' || type === 'webgl2')) glContexts.push(ctx);
+    return ctx;
+  };
+
   import '../dist/hjem-3d-card.js';
   const q = new URLSearchParams(location.search);
   document.body.className = q.get('bg') || 'dark';
@@ -25,5 +33,8 @@
     for (let i = 0; i < 20; i++) { card.setConfig({ ...config }); card.remove(); wrap.appendChild(card); }
   }
   if (q.has('t')) setTimeout(() => card.debugJump(Number(q.get('t'))), 300);
-  setTimeout(() => { document.title = `ready live=${window.hjem3dStats.liveViews}`; }, 800);
+  setTimeout(() => {
+    const liveGl = glContexts.filter(ctx => !ctx.isContextLost()).length;
+    document.title = `ready live=${window.hjem3dStats.liveViews} gl=${liveGl}`;
+  }, 800);
 </script></body></html>

@@ -15,39 +15,52 @@ export class View3D {
     this.container = container;
     this.config = config;
     this.quality = createQuality(config.quality);
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
-    this.renderer.setClearColor(0x000000, 0);
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.shadowMap.enabled = true;
-    this.canvas = this.renderer.domElement;
-    Object.assign(this.canvas.style, { display: 'block', width: '100%', height: '100%', touchAction: 'manipulation' });
-    container.appendChild(this.canvas);
-
-    this.materials = createMaterials({
-      makeCanvas: (w, h) => Object.assign(document.createElement('canvas'), { width: w, height: h }),
-    });
-    this.world = buildScene(config.house, { materials: this.materials, quality: this.quality.preset });
-    this.views = computeViews(config.house);
-    this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
-    this.interaction = createInteraction({ idleTimeoutMs: config.idle_timeout * 1000, now: performance.now() });
-    this.raycaster = new THREE.Raycaster();
-    this.ndc = new THREE.Vector2();
-    this.size = { w: 0, h: 0 };
-    this.visible = true;
-    this.pageVisible = document.visibilityState !== 'hidden';
-    this.raf = 0;
-    this.lastFrame = 0;
+    this.renderer = null;
+    this.canvas = null;
+    this.world = null;
     this.disposed = false;
+    try {
+      this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
+      this.renderer.setClearColor(0x000000, 0);
+      this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+      this.renderer.shadowMap.enabled = true;
+      this.canvas = this.renderer.domElement;
+      Object.assign(this.canvas.style, { display: 'block', width: '100%', height: '100%', touchAction: 'manipulation' });
+      container.appendChild(this.canvas);
 
-    if (config.debug) {
-      this.overlay = document.createElement('div');
-      this.overlay.className = 'debug';
-      container.appendChild(this.overlay);
+      this.materials = createMaterials({
+        makeCanvas: (w, h) => Object.assign(document.createElement('canvas'), { width: w, height: h }),
+      });
+      this.world = buildScene(config.house, { materials: this.materials, quality: this.quality.preset });
+      this.views = computeViews(config.house);
+      this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
+      this.interaction = createInteraction({ idleTimeoutMs: config.idle_timeout * 1000, now: performance.now() });
+      this.raycaster = new THREE.Raycaster();
+      this.ndc = new THREE.Vector2();
+      this.size = { w: 0, h: 0 };
+      this.visible = true;
+      this.pageVisible = document.visibilityState !== 'hidden';
+      this.raf = 0;
+      this.lastFrame = 0;
+
+      if (config.debug) {
+        this.overlay = document.createElement('div');
+        this.overlay.className = 'debug';
+        container.appendChild(this.overlay);
+      }
+      this.applyPreset();
+      this.bindEvents();
+      stats.liveViews++;
+      this.requestRender();
+    } catch (e) {
+      this.world?.dispose();
+      if (this.renderer) {
+        this.renderer.dispose();
+        this.renderer.forceContextLoss();
+      }
+      this.canvas?.remove();
+      throw e;
     }
-    this.applyPreset();
-    this.bindEvents();
-    stats.liveViews++;
-    this.requestRender();
   }
 
   applyPreset() {
@@ -61,10 +74,19 @@ export class View3D {
   bindEvents() {
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(this.container);
-    this.io = new IntersectionObserver(([e]) => { this.visible = e.isIntersecting; this.requestRender(); });
+    this.io = new IntersectionObserver(entries => {
+      const e = entries[entries.length - 1];
+      this.visible = e.isIntersecting;
+      this.requestRender();
+    });
     this.io.observe(this.container);
     this.onVisibility = () => { this.pageVisible = document.visibilityState !== 'hidden'; this.requestRender(); };
     document.addEventListener('visibilitychange', this.onVisibility);
+
+    this.onContextLost = e => e.preventDefault();
+    this.onContextRestored = () => this.requestRender();
+    this.canvas.addEventListener('webglcontextlost', this.onContextLost);
+    this.canvas.addEventListener('webglcontextrestored', this.onContextRestored);
 
     let down = null;
     this.onDown = e => { down = { x: e.clientX, y: e.clientY, at: performance.now() }; };
@@ -150,6 +172,8 @@ export class View3D {
     this.ro.disconnect();
     this.io.disconnect();
     document.removeEventListener('visibilitychange', this.onVisibility);
+    this.canvas.removeEventListener('webglcontextlost', this.onContextLost);
+    this.canvas.removeEventListener('webglcontextrestored', this.onContextRestored);
     this.canvas.removeEventListener('pointerdown', this.onDown);
     this.canvas.removeEventListener('pointerup', this.onUp);
     this.world.dispose();

@@ -45,6 +45,7 @@ export function validateHouse(h) {
   num(roof.gableOverhang, 'house.roof.gableOverhang');
   roof.solar = list(r.solar, 'house.roof.solar').map((p, i) => {
     const path = `house.roof.solar[${i}]`;
+    if (!p || typeof p !== 'object') fail(path, 'skal være et objekt');
     range(p, 'x0', 'x1', path);
     range(p, 'from', 'to', path);
     const cols = p.cols ?? 1, rows = p.rows ?? 1;
@@ -54,6 +55,7 @@ export function validateHouse(h) {
   });
   roof.windows = list(r.windows, 'house.roof.windows').map((w, i) => {
     const path = `house.roof.windows[${i}]`;
+    if (!w || typeof w !== 'object') fail(path, 'skal være et objekt');
     range(w, 'x0', 'x1', path);
     range(w, 'from', 'to', path);
     return { x0: w.x0, x1: w.x1, from: w.from, to: w.to };
@@ -64,10 +66,12 @@ export function validateHouse(h) {
     const len = side === 'north' || side === 'south' ? shell.width : shell.depth;
     const items = list(h.openings?.[side], `house.openings.${side}`).map((o, index) => {
       const path = `house.openings.${side}[${index}]`;
+      if (!o || typeof o !== 'object') fail(path, 'skal være et objekt');
       if (!KINDS.includes(o.kind)) fail(`${path}.kind`, `skal være en af ${KINDS.join(', ')}`);
       range(o, 'from', 'to', path);
       const sill = o.sill ?? 0;
       num(sill, `${path}.sill`);
+      if (sill < 0) fail(`${path}.sill`, 'må ikke være negativ');
       num(o.head, `${path}.head`);
       if (!(o.head > sill)) fail(`${path}.head`, 'skal være større end sill');
       if (o.from < 0 || o.to > len) fail(path, `ligger uden for væggen (0–${len})`);
@@ -84,6 +88,7 @@ export function validateHouse(h) {
 
   const surfaces = list(h.surfaces, 'house.surfaces').map((s, i) => {
     const path = `house.surfaces[${i}]`;
+    if (!s || typeof s !== 'object') fail(path, 'skal være et objekt');
     if (!SURFACES.includes(s.kind)) fail(`${path}.kind`, `skal være en af ${SURFACES.join(', ')}`);
     range(s, 'x0', 'x1', path);
     range(s, 'z0', 'z1', path);
@@ -92,6 +97,7 @@ export function validateHouse(h) {
 
   const hedges = list(h.hedges, 'house.hedges').map((g, i) => {
     const path = `house.hedges[${i}]`;
+    if (!g || typeof g !== 'object') fail(path, 'skal være et objekt');
     range(g, 'x0', 'x1', path);
     range(g, 'z0', 'z1', path);
     return { x0: g.x0, x1: g.x1, z0: g.z0, z1: g.z1, h: positive(g.h ?? 1.6, `${path}.h`) };

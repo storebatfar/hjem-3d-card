@@ -29,10 +29,10 @@ test('plan halfHeight fits both width and depth', () => {
   const v = computeViews(house);
   close(v.plan.halfHeight, Math.max(12 * 0.375, 8 * 0.75));
   close(v.plan.halfHeight, 6);
-  // Long house (23.69 × 8.51): width dominates
-  const longHouse = validateHouse({ plot: { x0: -9, x1: 27, z0: -3, z1: 17 }, shell: { width: 23.69, depth: 8.51 } });
+  // Long house (24 × 8.5): width dominates
+  const longHouse = validateHouse({ plot: { x0: -9, x1: 27, z0: -3, z1: 17 }, shell: { width: 24, depth: 8.5 } });
   const vLong = computeViews(longHouse);
-  close(vLong.plan.halfHeight, 23.69 * 0.375);
+  close(vLong.plan.halfHeight, 24 * 0.375);
 });
 
 test('viewAt hits both end views exactly', () => {

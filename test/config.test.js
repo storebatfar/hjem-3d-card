@@ -60,3 +60,21 @@ test('ignores unknown keys such as _notes', () => {
   const h = example(); h._notes = ['provisional'];
   assert.ok(validateHouse(h));
 });
+
+test('rejects null or non-object list items', () => {
+  assert.throws(() => normalizeConfig(withHouse(h => { h.openings.north.push(null); })),
+    /house\.openings\.north\[1\] skal være et objekt/);
+  assert.throws(() => normalizeConfig(withHouse(h => { h.surfaces.push('string'); })),
+    /house\.surfaces\[2\] skal være et objekt/);
+  assert.throws(() => normalizeConfig(withHouse(h => { h.roof.solar = [null]; })),
+    /house\.roof\.solar\[0\] skal være et objekt/);
+  assert.throws(() => normalizeConfig(withHouse(h => { h.roof.windows = [null]; })),
+    /house\.roof\.windows\[0\] skal være et objekt/);
+  assert.throws(() => normalizeConfig(withHouse(h => { h.hedges = [42]; })),
+    /house\.hedges\[0\] skal være et objekt/);
+});
+
+test('rejects negative sill', () => {
+  assert.throws(() => normalizeConfig(withHouse(h => { h.openings.north[0].sill = -0.5; })),
+    /house\.openings\.north\[0\]\.sill må ikke være negativ/);
+});

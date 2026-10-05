@@ -19,4 +19,4 @@ shot plan-light  "t=1&bg=light"                   1340,740
 shot idle-portrait "t=0&bg=dark&height=1000px"    720,1040
 shot debug-low   "t=0&bg=dark&debug&quality=low"  1340,740
 echo -n "leak check: "
-"$CHROME" "${FLAGS[@]}" --dump-dom "$URL?leak=1" 2>/dev/null | grep -o 'live=[0-9]*' || echo "no result"
+"$CHROME" "${FLAGS[@]}" --dump-dom "$URL?leak=1" 2>/dev/null | grep -o 'live=[0-9]* gl=[0-9]*' || echo "no result"

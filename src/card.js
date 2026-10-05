@@ -2,11 +2,21 @@ import { normalizeConfig } from './config.js';
 import { View3D, stats } from './renderer.js';
 import { VERSION } from './version.js';
 
+let webgl2Cached = null;
 const webglAvailable = () => {
+  if (webgl2Cached !== null) return webgl2Cached;
   try {
     const c = document.createElement('canvas');
-    return !!(c.getContext('webgl2') || c.getContext('webgl'));
+    const ctx = c.getContext('webgl2');
+    if (ctx) {
+      ctx.getExtension('WEBGL_lose_context')?.loseContext();
+      webgl2Cached = true;
+      return true;
+    }
+    webgl2Cached = false;
+    return false;
   } catch {
+    webgl2Cached = false;
     return false;
   }
 };
@@ -41,10 +51,15 @@ class HjemCard extends HTMLElement {
     const stage = root.querySelector('.stage');
     stage.style.height = this.config.height;
     if (!webglAvailable()) {
-      stage.innerHTML = '<div class="msg">Denne browser kan ikke vise 3D (WebGL mangler).</div>';
+      stage.innerHTML = '<div class="msg">Denne browser kan ikke vise 3D (WebGL2 mangler).</div>';
       return;
     }
-    this.view = new View3D(stage, this.config);
+    try {
+      this.view = new View3D(stage, this.config);
+    } catch (e) {
+      console.error('hjem-3d-card:', e);
+      stage.innerHTML = '<div class="msg">Kunne ikke starte 3D-visningen.</div>';
+    }
   }
 
   unmount() {

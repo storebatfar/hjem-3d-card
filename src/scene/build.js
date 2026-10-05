@@ -106,10 +106,11 @@ export function buildScene(house, { materials: m, quality }) {
   shadow.name = 'contact-shadow';
   scene.add(shadow);
 
+  const maxDeckDepth = Math.max(0, ...house.surfaces.filter(s => s.kind === 'deck').map(s => s.z1 - s.z0));
+  if (maxDeckDepth > 0 && m.deck.map) m.deck.map.repeat.set(1, maxDeckDepth / 0.6);
   for (const s of house.surfaces) {
     const deck = s.kind === 'deck';
     batch.add(m[s.kind], boxGeo({ x0: s.x0, x1: s.x1, y0: 0, y1: deck ? 0.22 : 0.03, z0: s.z0, z1: s.z1 }, deck ? 0.03 : 0));
-    if (deck && m.deck.map) m.deck.map.repeat.set((s.x1 - s.x0) / 0.15, 1);
   }
   for (const h of house.hedges) {
     batch.add(m.hedge, boxGeo({ x0: h.x0, x1: h.x1, y0: 0, y1: h.h, z0: h.z0, z1: h.z1 }, 0.3, 3));
@@ -130,9 +131,8 @@ export function buildScene(house, { materials: m, quality }) {
   const roofGroup = buildRoof(house, m);
   scene.add(roofGroup);
 
-  const R = roofGeometry(shell, roof);
-  const pickHouse = new THREE.Mesh(new THREE.BoxGeometry(shell.width, R.ridgeY, shell.depth), m.pick);
-  pickHouse.position.set(shell.width / 2, R.ridgeY / 2, shell.depth / 2);
+  const pickHouse = new THREE.Mesh(new THREE.BoxGeometry(shell.width, shell.wallHeight, shell.depth), m.pick);
+  pickHouse.position.set(shell.width / 2, shell.wallHeight / 2, shell.depth / 2);
   pickHouse.name = 'pick-house';
   scene.add(pickHouse);
 
