@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>hjem-3d-card harness</title>
+<style>
+  body { margin: 0; min-height: 100vh; font-family: sans-serif; }
+  body.dark  { background: linear-gradient(160deg, #1f2a36, #121820); --primary-text-color: #eee; }
+  body.light { background: linear-gradient(160deg, #f1efe9, #d9dde3); --primary-text-color: #222; }
+  #wrap { max-width: 1300px; margin: 0 auto; padding-top: 16px; }
+</style></head>
+<body><div id="wrap"></div>
+<script type="module">
+  import '../dist/hjem-3d-card.js';
+  const q = new URLSearchParams(location.search);
+  document.body.className = q.get('bg') || 'dark';
+  const getJson = async url => { const r = await fetch(url); if (!r.ok) throw new Error(url); return r.json(); };
+  const house = await getJson('private/house.json').catch(() => getJson('../test/fixtures/example-house.json'));
+  const wrap = document.getElementById('wrap');
+  const card = document.createElement('hjem-3d-card');
+  const config = { type: 'custom:hjem-3d-card', house, debug: q.has('debug'), height: q.get('height') || '700px', quality: q.get('quality') || 'high' };
+  card.setConfig(config);
+  card.hass = { states: {}, callService: async () => {} };
+  wrap.appendChild(card);
+  window.__card = card;
+  if (q.has('leak')) {
+    // Review Focus 1+2: re-config and remount many times; exactly one live view must remain.
+    for (let i = 0; i < 20; i++) { card.setConfig({ ...config }); card.remove(); wrap.appendChild(card); }
+  }
+  if (q.has('t')) setTimeout(() => card.debugJump(Number(q.get('t'))), 300);
+  setTimeout(() => { document.title = `ready live=${window.hjem3dStats.liveViews}`; }, 800);
+</script></body></html>
