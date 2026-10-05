@@ -1,0 +1,4 @@
+node_modules/
+harness/private/
+harness/shots/
+.DS_Store

@@ -1,0 +1,16 @@
+{
+  "name": "hjem-3d-card",
+  "version": "2026.10.1",
+  "private": true,
+  "type": "module",
+  "description": "Home Assistant Lovelace card: an interactive 3D model of a house and garden",
+  "scripts": {
+    "build": "esbuild src/card.js --bundle --format=esm --target=es2020 --minify --legal-comments=none --outfile=dist/hjem-3d-card.js",
+    "test": "node --test \"test/**/*.test.js\"",
+    "harness": "node harness/serve.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "three": "0.170.0"
+  }
+}

@@ -1,0 +1,1 @@
+var t="2026.10.1";var e=class extends HTMLElement{setConfig(n){this.config=n}getCardSize(){return 12}};customElements.get("hjem-3d-card")||customElements.define("hjem-3d-card",e);console.info(`hjem-3d-card v${t}`);
