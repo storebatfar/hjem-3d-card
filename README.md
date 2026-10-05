@@ -26,7 +26,7 @@ light group with `rooms`; in the floor-plan view the room glows in the group's c
 
 ```yaml
 rooms:
-  living_room: { light: light.living_room }
+  living: { light: light.living_room }
   bedroom: {}            # drawn, but no light (not tappable)
 mode_entity: input_select.theme_mode   # tap flash turns dark when this is "Lys"
 ```
