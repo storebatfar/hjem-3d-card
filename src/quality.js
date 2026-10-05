@@ -1,7 +1,7 @@
 export const PRESETS = Object.freeze({
-  high: Object.freeze({ pixelRatio: 2, shadows: true, soft: true, shadowMapSize: 2048 }),
-  medium: Object.freeze({ pixelRatio: 1.5, shadows: true, soft: false, shadowMapSize: 1024 }),
-  low: Object.freeze({ pixelRatio: 1, shadows: false, soft: false, shadowMapSize: 512 }),
+  high: Object.freeze({ pixelRatio: 2, shadows: true, soft: true, shadowMapSize: 2048, roomLights: true }),
+  medium: Object.freeze({ pixelRatio: 1.5, shadows: true, soft: false, shadowMapSize: 1024, roomLights: true }),
+  low: Object.freeze({ pixelRatio: 1, shadows: false, soft: false, shadowMapSize: 512, roomLights: false }),
 });
 const ORDER = ['high', 'medium', 'low'];
 

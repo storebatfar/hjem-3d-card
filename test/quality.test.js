@@ -36,3 +36,9 @@ test('presets get cheaper from high to low', () => {
   assert.ok(PRESETS.high.pixelRatio > PRESETS.medium.pixelRatio && PRESETS.medium.pixelRatio > PRESETS.low.pixelRatio);
   assert.equal(PRESETS.low.shadows, false);
 });
+
+test('room lights are on at high/medium and off at low', () => {
+  assert.equal(PRESETS.high.roomLights, true);
+  assert.equal(PRESETS.medium.roomLights, true);
+  assert.equal(PRESETS.low.roomLights, false);
+});

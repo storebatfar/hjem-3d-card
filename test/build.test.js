@@ -20,7 +20,7 @@ test('builds the named parts', () => {
 test('static geometry is merged to one mesh per material', () => {
   const { world } = make();
   const meshes = world.scene.getObjectByName('static').children.filter(o => o.isMesh);
-  assert.ok(meshes.length <= 16, `${meshes.length} meshes`);
+  assert.ok(meshes.length <= 20, `${meshes.length} meshes`);
   assert.equal(new Set(meshes.map(m => m.material)).size, meshes.length);
 });
 

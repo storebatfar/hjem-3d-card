@@ -4,7 +4,7 @@ export const PALETTE = Object.freeze({
   wall: 0xeeeee9, frame: 0x2a2f33, glass: 0x2a3640, door: 0x1f2627, garageDoor: 0x2c3439,
   lawn: 0x6a9a2a, plotEdge: 0x5e7f45, concrete: 0xb8a68c, path: 0xb5a47e, deck: 0x5a4433,
   hedge: 0x2f4f1e, floor: 0xdccdb3, roofTile: 0x35383c, roofEdge: 0x2a2c30, panel: 0x161b22,
-  roofWindow: 0xa9c7de,
+  roofWindow: 0xa9c7de, inner: 0xf2f1ed, cabinet: 0xe3ddd2, counter: 0xc9b79c,
 });
 
 export function createMaterials({ makeCanvas } = {}) {
@@ -22,6 +22,9 @@ export function createMaterials({ makeCanvas } = {}) {
     deck: std(PALETTE.deck, { roughness: 0.8 }),
     hedge: std(PALETTE.hedge),
     floor: std(PALETTE.floor),
+    inner: std(PALETTE.inner),
+    cabinet: std(PALETTE.cabinet),
+    counter: std(PALETTE.counter, { roughness: 0.7 }),
     // Roof materials fade out during the roof lift, so they are transparent from the start.
     roofTile: std(PALETTE.roofTile, { transparent: true }),
     roofEdge: std(PALETTE.roofEdge, { transparent: true }),

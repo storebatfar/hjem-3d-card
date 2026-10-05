@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { wallBoxes, openingParts, roofGeometry, panelRects } from '../geometry.js';
+import { buildRooms, applyRoomQuality } from './rooms.js';
 
 const SIDES = ['north', 'south', 'west', 'east'];
 const ROOF_LIFT_CLEARANCE = 0.16; // slab thickness of each roof slope
@@ -87,13 +88,14 @@ function buildRoof(house, m) {
   return group;
 }
 
-export function buildScene(house, { materials: m, quality }) {
+export function buildScene(house, { materials: m, quality, litRooms = [] }) {
   const { plot, shell, roof } = house;
   const scene = new THREE.Scene();
   const statics = new THREE.Group();
   statics.name = 'static';
   scene.add(statics);
   const batch = new Batch();
+  const rooms = buildRooms(house, m, litRooms);
   const pw = plot.x1 - plot.x0, pd = plot.z1 - plot.z0;
   const cx = (plot.x0 + plot.x1) / 2, cz = (plot.z0 + plot.z1) / 2;
 
@@ -121,15 +123,19 @@ export function buildScene(house, { materials: m, quality }) {
     for (const b of wallBoxes(side, shell, house.openings[side])) {
       if (b.kind === 'wall') { batch.add(m.wall, boxGeo(b, 0.02)); continue; }
       const { pane, frame } = openingParts(b);
-      batch.add(m[OPENING_MATERIAL[b.kind]], boxGeo(pane));
+      const paneMat = b.kind === 'window' && b.room && rooms.glass[b.room] ? rooms.glass[b.room] : m[OPENING_MATERIAL[b.kind]];
+      batch.add(paneMat, boxGeo(pane));
       for (const f of frame) batch.add(m.frame, boxGeo(f));
     }
   }
+  for (const w of house.walls) batch.add(m.inner, boxGeo({ x0: w.x0, x1: w.x1, y0: 0, y1: w.h, z0: w.z0, z1: w.z1 }, 0.01));
+  for (const f of house.fixtures) batch.add(m[f.kind], boxGeo({ x0: f.x0, x1: f.x1, y0: 0.08, y1: 0.08 + f.h, z0: f.z0, z1: f.z1 }, 0.02));
   if (m.garageDoor.map) m.garageDoor.map.repeat.set(1, 1);
   batch.flush(statics);
 
   const roofGroup = buildRoof(house, m);
   scene.add(roofGroup);
+  scene.add(rooms.group);
 
   const pickHouse = new THREE.Mesh(new THREE.BoxGeometry(shell.width, shell.wallHeight, shell.depth), m.pick);
   pickHouse.position.set(shell.width / 2, shell.wallHeight / 2, shell.depth / 2);
@@ -145,18 +151,24 @@ export function buildScene(house, { materials: m, quality }) {
   sun.shadow.bias = -0.0004;
   sun.shadow.normalBias = 0.02;
   scene.add(hemi, sun, sun.target);
-  const world = { scene, roofGroup, sun, hemi, pickTargets: { house: pickHouse }, dispose: () => disposeScene(scene) };
+  const world = {
+    scene, roofGroup, sun, hemi, rooms,
+    pickTargets: { house: pickHouse, rooms: rooms.picks },
+    dispose: () => { disposeScene(scene); Object.values(rooms.glass).forEach(g => g.dispose()); },
+  };
   applyQuality(world, quality);
   return world;
 }
 
-export function applyQuality({ sun }, preset) {
+export function applyQuality(world, preset) {
+  const { sun } = world;
   sun.castShadow = preset.shadows;
   if (sun.shadow.mapSize.x !== preset.shadowMapSize) {
     sun.shadow.mapSize.set(preset.shadowMapSize, preset.shadowMapSize);
     sun.shadow.map?.dispose();
     sun.shadow.map = null;
   }
+  if (world.rooms) applyRoomQuality(world.rooms, preset);
 }
 
 export function applyRoof(roofGroup, m, { lift, opacity, visible }) {
