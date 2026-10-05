@@ -153,7 +153,7 @@ export function buildScene(house, { materials: m, quality, litRooms = [] }) {
   scene.add(hemi, sun, sun.target);
   const world = {
     scene, roofGroup, sun, hemi, rooms,
-    pickTargets: { house: pickHouse, rooms: rooms.picks },
+    pickTargets: { house: pickHouse, rooms: rooms.picks, blockers: statics.children },
     dispose: () => { disposeScene(scene); Object.values(rooms.glass).forEach(g => g.dispose()); },
   };
   applyQuality(world, quality);

@@ -70,7 +70,9 @@ class HjemCard extends HTMLElement {
 
   debugJump(t) { this.view?.debugJump(t); }
 
-  debugTapAt(x, z) { this.view?.debugTapAt(x, z); }
+  debugTapAt(x, z, y) { this.view?.debugTapAt(x, z, y); }
+
+  debugFlashes() { return this.view?.debugFlashes() ?? []; }
 }
 
 if (!customElements.get('hjem-3d-card')) {

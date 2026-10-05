@@ -23,8 +23,10 @@ shot plan-lit-dark   "t=1&bg=dark&lit=auto"            1340,740
 shot idle-lit-dark   "t=0&bg=dark&lit=auto"            1340,740
 shot plan-lit-light  "t=1&bg=light&lit=auto&mode=Lys"  1340,740
 check() { "$CHROME" "${FLAGS[@]}" --dump-dom "$URL?$1&house=$HOUSE" 2>/dev/null | grep -o '<title>[^<]*' | sed 's/<title>//'; }
-echo "tap in plan:  $(check 't=1&tap=auto')"
-echo "tap in idle:  $(check 't=0&tapidle=auto')"
-echo "hass churn:   $(check 't=0&churn=1')"   # idle: plan mode wakes once a second on purpose
+echo "tap in plan:      $(check 't=1&tap=auto')"
+echo "tap in idle:      $(check 't=0&tapidle=auto')"
+echo "hass churn:       $(check 't=0&churn=1')"   # idle: plan mode wakes once a second on purpose
+echo "two quick taps:   $(check 't=1&tap2=auto')"
+echo "tap on a wall:    $(check 't=1&tapwall=auto')"
 echo -n "leak check: "
 "$CHROME" "${FLAGS[@]}" --dump-dom "$URL?leak=1&house=$HOUSE" 2>/dev/null | grep -o 'live=[0-9]* gl=[0-9]*' || echo "no result"

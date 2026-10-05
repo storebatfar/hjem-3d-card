@@ -57,7 +57,18 @@
   const tapIdleId = q.get('tapidle') === 'auto' ? roomIds[0] : q.get('tapidle');
   if (tapId) setTimeout(() => card.debugTapAt(...center(tapId)), 500);         // needs t=1 (plan)
   if (tapIdleId) setTimeout(() => card.debugTapAt(...center(tapIdleId)), 500); // needs t=0 (idle)
-  let framesDelta = 'n/a';
+  if (q.get('tap2') === 'auto' && roomIds.length >= 2) {
+    setTimeout(() => {
+      card.debugTapAt(...center(roomIds[0]));
+      setTimeout(() => card.debugTapAt(...center(roomIds[1])), 50);
+    }, 500);
+  }
+  if (q.get('tapwall') === 'auto' && house.walls && house.walls.length > 0) {
+    const w = house.walls[0];
+    const wh = w.h ?? (house.shell.wallHeight || 2.5);
+    setTimeout(() => card.debugTapAt((w.x0 + w.x1) / 2, (w.z0 + w.z1) / 2, wh), 500);
+  }
+  let framesDelta = 'n/a', flashes = 'n/a';
   if (q.has('churn')) setTimeout(() => {
     const f0 = window.hjem3dStats.frames;
     for (let i = 0; i < 100; i++) card.hass = { ...hass, states: { ...hass.states, 'sensor.churn': { state: String(i) } } };
@@ -65,6 +76,7 @@
   }, 900);
   setTimeout(() => {
     const liveGl = glContexts.filter(ctx => !ctx.isContextLost()).length;
-    document.title = `ready live=${window.hjem3dStats.liveViews} gl=${liveGl} calls=${calls.join(',') || 'none'} framesDelta=${framesDelta}`;
+    if (card.debugFlashes) flashes = card.debugFlashes().join(',') || 'none';
+    document.title = `ready live=${window.hjem3dStats.liveViews} gl=${liveGl} calls=${calls.join(',') || 'none'} framesDelta=${framesDelta} flashes=${flashes}`;
   }, 1400);
 </script></body></html>
