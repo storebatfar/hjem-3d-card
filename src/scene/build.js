@@ -109,6 +109,7 @@ export function buildScene(house, { materials: m, quality }) {
   for (const s of house.surfaces) {
     const deck = s.kind === 'deck';
     batch.add(m[s.kind], boxGeo({ x0: s.x0, x1: s.x1, y0: 0, y1: deck ? 0.22 : 0.03, z0: s.z0, z1: s.z1 }, deck ? 0.03 : 0));
+    if (deck && m.deck.map) m.deck.map.repeat.set((s.x1 - s.x0) / 0.15, 1);
   }
   for (const h of house.hedges) {
     batch.add(m.hedge, boxGeo({ x0: h.x0, x1: h.x1, y0: 0, y1: h.h, z0: h.z0, z1: h.z1 }, 0.3, 3));
@@ -123,6 +124,7 @@ export function buildScene(house, { materials: m, quality }) {
       for (const f of frame) batch.add(m.frame, boxGeo(f));
     }
   }
+  if (m.garageDoor.map) m.garageDoor.map.repeat.set(1, 1);
   batch.flush(statics);
 
   const roofGroup = buildRoof(house, m);

@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 
 export const PALETTE = Object.freeze({
-  wall: 0xf3f1ec, frame: 0xf7f7f4, glass: 0x51687c, door: 0x4a4f56, garageDoor: 0x8a9097,
-  lawn: 0x76a352, plotEdge: 0x5e7f45, concrete: 0xcdc9c0, path: 0xd5d1c8, deck: 0x9a6b45,
-  hedge: 0x456f36, floor: 0xdccdb3, roofTile: 0x3a3e44, roofEdge: 0x2e3237, panel: 0x1d2738,
+  wall: 0xeeeee9, frame: 0x2a2f33, glass: 0x2a3640, door: 0x1f2627, garageDoor: 0x2c3439,
+  lawn: 0x6a9a2a, plotEdge: 0x5e7f45, concrete: 0xb8a68c, path: 0xb5a47e, deck: 0x5a4433,
+  hedge: 0x2f4f1e, floor: 0xdccdb3, roofTile: 0x35383c, roofEdge: 0x2a2c30, panel: 0x161b22,
   roofWindow: 0xa9c7de,
 });
 
@@ -32,10 +32,25 @@ export function createMaterials({ makeCanvas } = {}) {
     contactShadow: new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false }),
   };
   if (makeCanvas) {
+    const stripes = (w, h, base, line, every, thick, vertical) => {
+      const c = makeCanvas(w, h), g = c.getContext('2d');
+      g.fillStyle = base; g.fillRect(0, 0, w, h);
+      g.fillStyle = line;
+      for (let p = 0; p < (vertical ? w : h); p += every) vertical ? g.fillRect(p, 0, thick, h) : g.fillRect(0, p, w, thick);
+      const t = new THREE.CanvasTexture(c);
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      return t;
+    };
+    m.deck.map = stripes(64, 64, '#5a4433', '#46352a', 16, 2, false);
+    m.deck.color.set(0xffffff);
+    m.garageDoor.map = stripes(64, 64, '#2c3439', '#1d2327', 16, 2, false);
+    m.garageDoor.color.set(0xffffff);
+
     const tiles = makeCanvas(64, 64);
     const g = tiles.getContext('2d');
-    g.fillStyle = '#3a3e44'; g.fillRect(0, 0, 64, 64);
-    g.fillStyle = '#2a2d32'; g.fillRect(0, 56, 64, 8);
+    g.fillStyle = '#35383c'; g.fillRect(0, 0, 64, 64);
+    g.fillStyle = '#26282b'; g.fillRect(0, 56, 64, 8);
     const tex = new THREE.CanvasTexture(tiles);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;

@@ -70,3 +70,12 @@ test('dispose releases every geometry and material', () => {
   assert.equal(g, geos.size);
   assert.equal(m, mats.size);
 });
+
+test('with a canvas factory, deck and garage doors get textures', () => {
+  const fakeCtx = { fillRect() {}, createRadialGradient: () => ({ addColorStop() {} }), set fillStyle(v) {} };
+  const makeCanvas = (width, height) => ({ width, height, getContext: () => fakeCtx });
+  const m = createMaterials({ makeCanvas });
+  assert.ok(m.deck.map, 'deck boards texture');
+  assert.ok(m.garageDoor.map, 'garage door grooves texture');
+  assert.ok(m.roofTile.map, 'roof tiles texture');
+});
