@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { validateHouse } from '../src/config.js';
-import { ease, computeViews, fitHalfHeight, viewAt, roofAt } from '../src/view.js';
+import { ease, computeViews, fitView, viewAt, roofAt } from '../src/view.js';
 
 const house = validateHouse(JSON.parse(readFileSync(new URL('./fixtures/example-house.json', import.meta.url))));
 const close = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} ≈ ${b}`);
@@ -14,41 +14,98 @@ test('ease is clamped, symmetric and monotonic', () => {
   for (let i = 0; i <= 100; i++) { const v = ease(i / 100); assert.ok(v >= prev); prev = v; }
 });
 
-test('views aim at the plot centre (idle) and the house (plan)', () => {
+test('fitView with example house projects all points inside frame with balanced margins', () => {
   const v = computeViews(house);
-  assert.deepEqual(v.idle.target, [6, 0, 5]);
-  assert.deepEqual(v.plan.target, [6, 0, 4.9]);
-  assert.ok(v.idle.pos[1] > 0 && v.plan.pos[1] > 0);
-  assert.ok(v.idle.pos[0] < v.idle.target[0], 'idle camera is west of the target');
-  assert.ok(v.idle.pos[2] > v.idle.target[2], 'idle camera is south of the target');
-  assert.ok(v.plan.halfHeight < v.idle.halfHeight, 'plan is zoomed in');
+  const aspects = [1316 / 700, 16 / 9, 0.6];
+
+  for (const aspect of aspects) {
+    // Idle view
+    const idle = fitView(v.idle.dir, v.idle.points, aspect, v.idle.margin);
+    const hh = idle.halfHeight;
+    const hw = hh * (aspect > 0 && Number.isFinite(aspect) ? aspect : 16 / 9);
+
+    // Build camera basis
+    const f = [idle.pos[0] - idle.target[0], idle.pos[1] - idle.target[1], idle.pos[2] - idle.target[2]];
+    const fl = Math.hypot(...f);
+    f[0] /= fl; f[1] /= fl; f[2] /= fl;
+    const r = [f[1] * 0 - f[2] * 1, f[2] * 0 - f[0] * 0, f[0] * 1 - f[1] * 0];
+    const rl = Math.hypot(...r);
+    r[0] /= rl; r[1] /= rl; r[2] /= rl;
+    const u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]];
+
+    let minProjR = Infinity, maxProjR = -Infinity, minProjU = Infinity, maxProjU = -Infinity;
+    for (const p of v.idle.points) {
+      const rel = [p[0] - idle.target[0], p[1] - idle.target[1], p[2] - idle.target[2]];
+      const pR = rel[0] * r[0] + rel[1] * r[1] + rel[2] * r[2];
+      const pU = rel[0] * u[0] + rel[1] * u[1] + rel[2] * u[2];
+      minProjR = Math.min(minProjR, pR); maxProjR = Math.max(maxProjR, pR);
+      minProjU = Math.min(minProjU, pU); maxProjU = Math.max(maxProjU, pU);
+      assert.ok(pR >= -hw && pR <= hw, `idle point ${p} projects inside horizontal bounds at aspect ${aspect}`);
+      assert.ok(pU >= -hh && pU <= hh, `idle point ${p} projects inside vertical bounds at aspect ${aspect}`);
+    }
+
+    // Check balanced margins
+    assert.ok(Math.abs((hw + minProjR) - (hw - maxProjR)) < 1e-6 * hw, `idle horizontal margins balanced at aspect ${aspect}`);
+    assert.ok(Math.abs((hh + minProjU) - (hh - maxProjU)) < 1e-6 * hh, `idle vertical margins balanced at aspect ${aspect}`);
+
+    // Plan view
+    const plan = fitView(v.plan.dir, v.plan.points, aspect, v.plan.margin);
+    const hhp = plan.halfHeight;
+    const hwp = hhp * (aspect > 0 && Number.isFinite(aspect) ? aspect : 16 / 9);
+
+    const fp = [plan.pos[0] - plan.target[0], plan.pos[1] - plan.target[1], plan.pos[2] - plan.target[2]];
+    const flp = Math.hypot(...fp);
+    fp[0] /= flp; fp[1] /= flp; fp[2] /= flp;
+    const rp = [fp[1] * 0 - fp[2] * 1, fp[2] * 0 - fp[0] * 0, fp[0] * 1 - fp[1] * 0];
+    const rlp = Math.hypot(...rp);
+    rp[0] /= rlp; rp[1] /= rlp; rp[2] /= rlp;
+    const up = [rp[1] * fp[2] - rp[2] * fp[1], rp[2] * fp[0] - rp[0] * fp[2], rp[0] * fp[1] - rp[1] * fp[0]];
+
+    let minProjRp = Infinity, maxProjRp = -Infinity, minProjUp = Infinity, maxProjUp = -Infinity;
+    for (const p of v.plan.points) {
+      const rel = [p[0] - plan.target[0], p[1] - plan.target[1], p[2] - plan.target[2]];
+      const pR = rel[0] * rp[0] + rel[1] * rp[1] + rel[2] * rp[2];
+      const pU = rel[0] * up[0] + rel[1] * up[1] + rel[2] * up[2];
+      minProjRp = Math.min(minProjRp, pR); maxProjRp = Math.max(maxProjRp, pR);
+      minProjUp = Math.min(minProjUp, pU); maxProjUp = Math.max(maxProjUp, pU);
+      assert.ok(pR >= -hwp && pR <= hwp, `plan point ${p} projects inside horizontal bounds at aspect ${aspect}`);
+      assert.ok(pU >= -hhp && pU <= hhp, `plan point ${p} projects inside vertical bounds at aspect ${aspect}`);
+    }
+
+    assert.ok(Math.abs((hwp + minProjRp) - (hwp - maxProjRp)) < 1e-6 * hwp, `plan horizontal margins balanced at aspect ${aspect}`);
+    assert.ok(Math.abs((hhp + minProjUp) - (hhp - maxProjUp)) < 1e-6 * hhp, `plan vertical margins balanced at aspect ${aspect}`);
+  }
 });
 
-test('plan halfHeight fits both width and depth', () => {
-  // Example house (12 × 8): depth dominates
+test('fitView survives 0 / NaN / Infinity aspect', () => {
   const v = computeViews(house);
-  close(v.plan.halfHeight, Math.max(12 * 0.375, 8 * 0.75));
-  close(v.plan.halfHeight, 6);
-  // Long house (24 × 8.5): width dominates
-  const longHouse = validateHouse({ plot: { x0: -9, x1: 27, z0: -3, z1: 17 }, shell: { width: 24, depth: 8.5 } });
-  const vLong = computeViews(longHouse);
-  close(vLong.plan.halfHeight, 24 * 0.375);
+  for (const aspect of [0, NaN, Infinity]) {
+    const idle = fitView(v.idle.dir, v.idle.points, aspect, v.idle.margin);
+    assert.ok(Number.isFinite(idle.halfHeight), `idle halfHeight is finite for aspect ${aspect}`);
+    assert.ok(idle.pos.every(Number.isFinite), `idle pos is finite for aspect ${aspect}`);
+    assert.ok(idle.target.every(Number.isFinite), `idle target is finite for aspect ${aspect}`);
+
+    const plan = fitView(v.plan.dir, v.plan.points, aspect, v.plan.margin);
+    assert.ok(Number.isFinite(plan.halfHeight), `plan halfHeight is finite for aspect ${aspect}`);
+    assert.ok(plan.pos.every(Number.isFinite), `plan pos is finite for aspect ${aspect}`);
+    assert.ok(plan.target.every(Number.isFinite), `plan target is finite for aspect ${aspect}`);
+  }
 });
 
 test('viewAt hits both end views exactly', () => {
   const v = computeViews(house);
-  const a = viewAt(v, 0, 16 / 9), b = viewAt(v, 1, 16 / 9);
-  assert.deepEqual(a.pos, v.idle.pos); assert.deepEqual(a.target, v.idle.target);
-  assert.deepEqual(b.pos, v.plan.pos); assert.deepEqual(b.target, v.plan.target);
-});
+  const aspect = 16 / 9;
+  const a = viewAt(v, 0, aspect), b = viewAt(v, 1, aspect);
+  const idle = fitView(v.idle.dir, v.idle.points, aspect, v.idle.margin);
+  const plan = fitView(v.plan.dir, v.plan.points, aspect, v.plan.margin);
 
-test('fitHalfHeight survives 0 / NaN / Infinity aspect and widens for portrait', () => {
-  assert.equal(fitHalfHeight(10, 18, 0), 10);
-  assert.equal(fitHalfHeight(10, 18, NaN), 10);
-  assert.equal(fitHalfHeight(10, 18, Infinity), 10);
-  assert.equal(fitHalfHeight(10, 18, 16 / 9), 10.125);
-  assert.equal(fitHalfHeight(10, 18, 0.6), 30);
-  assert.equal(fitHalfHeight(10, 5, 2), 10);
+  assert.deepEqual(a.pos, idle.pos);
+  assert.deepEqual(a.target, idle.target);
+  close(a.halfHeight, idle.halfHeight);
+
+  assert.deepEqual(b.pos, plan.pos);
+  assert.deepEqual(b.target, plan.target);
+  close(b.halfHeight, plan.halfHeight);
 });
 
 test('roof is down and solid at t=0, lifted and gone at t=1', () => {
