@@ -136,8 +136,8 @@ export function buildScene(house, { materials: m, quality }) {
   pickHouse.name = 'pick-house';
   scene.add(pickHouse);
 
-  const hemi = new THREE.HemisphereLight(0xe8eef6, 0x7a6a55, 1.1);
-  const sun = new THREE.DirectionalLight(0xfff1dc, 2.0);
+  const hemi = new THREE.HemisphereLight(0xffffff, 0xc9c6bf, 1.6);
+  const sun = new THREE.DirectionalLight(0xfff1dc, 2.2);
   sun.position.set(cx - 12, 30, cz + 22);
   sun.target.position.set(cx, 0, cz);
   const ext = Math.max(pw, pd) * 0.75;
