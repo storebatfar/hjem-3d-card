@@ -62,3 +62,11 @@ test('panelRects makes cols × rows panels inside the field', () => {
   assert.equal(ps.length, 8);
   for (const p of ps) assert.ok(p.x0 >= 2 && p.x1 <= 6 && p.from >= 1 && p.to <= 3 && p.x1 > p.x0);
 });
+
+test('openings with a room carry it onto their piece and box', () => {
+  const shell = { width: 12, depth: 8, wallHeight: 2.5, wallThickness: 0.4 };
+  const boxes = wallBoxes('north', shell, [{ from: 2, to: 3, sill: 0.9, head: 2.1, kind: 'window', room: 'living' }]);
+  const pane = boxes.find(b => b.kind === 'window');
+  assert.equal(pane.room, 'living');
+  assert.equal(boxes.filter(b => b.kind === 'wall').every(b => !('room' in b)), true);
+});

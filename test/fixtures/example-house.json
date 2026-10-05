@@ -7,14 +7,28 @@
     "windows": [{ "x0": 8, "x1": 8.8, "from": 1.2, "to": 2.2 }]
   },
   "openings": {
-    "north": [{ "from": 2, "to": 3.2, "sill": 0.9, "head": 2.1, "kind": "window" }],
+    "north": [
+      { "from": 2, "to": 3.2, "sill": 0.9, "head": 2.1, "kind": "window", "room": "living" },
+      { "from": 8.5, "to": 9.7, "sill": 0.9, "head": 2.1, "kind": "window", "room": "bedroom" }
+    ],
     "south": [
-      { "from": 4, "to": 6, "sill": 0.6, "head": 2.1, "kind": "window" },
+      { "from": 4, "to": 6, "sill": 0.6, "head": 2.1, "kind": "window", "room": "living" },
       { "from": 1, "to": 2, "sill": 0, "head": 2.1, "kind": "door" }
     ],
     "west": [{ "from": 2, "to": 4.4, "sill": 0, "head": 2.15, "kind": "garage-door" }],
     "east": []
   },
+  "rooms": {
+    "living":  { "rects": [{ "x0": 0.4, "x1": 7.0, "z0": 0.4, "z1": 7.6 }] },
+    "bedroom": { "rects": [{ "x0": 7.1, "x1": 11.6, "z0": 0.4, "z1": 7.6 }] }
+  },
+  "walls": [
+    { "x0": 7.0, "x1": 7.1, "z0": 0.4, "z1": 4.0 },
+    { "x0": 7.0, "x1": 7.1, "z0": 5.0, "z1": 7.6 }
+  ],
+  "fixtures": [
+    { "kind": "counter", "x0": 0.5, "x1": 2.5, "z0": 6.9, "z1": 7.6, "h": 0.9 }
+  ],
   "surfaces": [
     { "kind": "concrete", "x0": -4, "x1": 0, "z0": -1, "z1": 8 },
     { "kind": "deck", "x0": 7, "x1": 12, "z0": 8, "z1": 11 }

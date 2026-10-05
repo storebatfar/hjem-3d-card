@@ -5,7 +5,7 @@ export function wallPieces(openings, length, height) {
     if (o.from > pos) out.push({ a: pos, b: o.from, y0: 0, y1: height, kind: 'wall' });
     if (o.sill > 0) out.push({ a: o.from, b: o.to, y0: 0, y1: o.sill, kind: 'wall' });
     if (o.head < height) out.push({ a: o.from, b: o.to, y0: o.head, y1: height, kind: 'wall' });
-    out.push({ a: o.from, b: o.to, y0: o.sill, y1: o.head, kind: o.kind });
+    out.push({ a: o.from, b: o.to, y0: o.sill, y1: o.head, kind: o.kind, ...(o.room ? { room: o.room } : {}) });
     pos = o.to;
   }
   if (pos < length) out.push({ a: pos, b: length, y0: 0, y1: height, kind: 'wall' });
@@ -21,9 +21,12 @@ export function wallBoxes(side, shell, openings) {
     // north/south walls own the corners; trim west/east so the corners are not built twice
     pieces = pieces.map(p => ({ ...p, a: Math.max(p.a, T), b: Math.min(p.b, D - T) })).filter(p => p.b > p.a);
   }
-  return pieces.map(p => alongX
-    ? { x0: p.a, x1: p.b, y0: p.y0, y1: p.y1, z0: c0, z1: c1, kind: p.kind, side }
-    : { x0: c0, x1: c1, y0: p.y0, y1: p.y1, z0: p.a, z1: p.b, kind: p.kind, side });
+  return pieces.map(p => {
+    const room = p.room ? { room: p.room } : {};
+    return alongX
+      ? { x0: p.a, x1: p.b, y0: p.y0, y1: p.y1, z0: c0, z1: c1, kind: p.kind, side, ...room }
+      : { x0: c0, x1: c1, y0: p.y0, y1: p.y1, z0: p.a, z1: p.b, kind: p.kind, side, ...room };
+  });
 }
 
 const FRAME = 0.05;

@@ -63,7 +63,7 @@ test('ignores unknown keys such as _notes', () => {
 
 test('rejects null or non-object list items', () => {
   assert.throws(() => normalizeConfig(withHouse(h => { h.openings.north.push(null); })),
-    /house\.openings\.north\[1\] skal være et objekt/);
+    /house\.openings\.north\[2\] skal være et objekt/);
   assert.throws(() => normalizeConfig(withHouse(h => { h.surfaces.push('string'); })),
     /house\.surfaces\[2\] skal være et objekt/);
   assert.throws(() => normalizeConfig(withHouse(h => { h.roof.solar = [null]; })),
@@ -77,4 +77,47 @@ test('rejects null or non-object list items', () => {
 test('rejects negative sill', () => {
   assert.throws(() => normalizeConfig(withHouse(h => { h.openings.north[0].sill = -0.5; })),
     /house\.openings\.north\[0\]\.sill må ikke være negativ/);
+});
+
+test('normalizes rooms, interior walls and fixtures', () => {
+  const h = validateHouse(example());
+  assert.deepEqual(Object.keys(h.rooms), ['living', 'bedroom']);
+  assert.deepEqual(h.rooms.living.rects, [{ x0: 0.4, x1: 7.0, z0: 0.4, z1: 7.6 }]);
+  assert.equal(h.walls.length, 2);
+  assert.equal(h.walls[0].h, 2.5);
+  assert.deepEqual(h.fixtures[0], { x0: 0.5, x1: 2.5, z0: 6.9, z1: 7.6, kind: 'counter', h: 0.9 });
+});
+
+test('keeps the room on openings that name one', () => {
+  const h = validateHouse(example());
+  assert.equal(h.openings.north[0].room, 'living');
+  assert.equal('room' in h.openings.south[0], false);
+});
+
+test('a house without rooms, walls or fixtures is still valid', () => {
+  const raw = example(); delete raw.rooms; delete raw.walls; delete raw.fixtures;
+  for (const side of ['north', 'south', 'west', 'east']) raw.openings[side].forEach(o => delete o.room);
+  const h = validateHouse(raw);
+  assert.deepEqual(h.rooms, {}); assert.deepEqual(h.walls, []); assert.deepEqual(h.fixtures, []);
+});
+
+test('rejects an opening room that does not exist', () => {
+  assert.throws(() => normalizeConfig(withHouse(h => { h.openings.north[0].room = 'attic'; })),
+    /house\.openings\.north\[0\]\.room findes ikke i house\.rooms/);
+});
+
+test('rejects a room rectangle outside the house', () => {
+  assert.throws(() => normalizeConfig(withHouse(h => { h.rooms.living.rects[0].x1 = 13; })),
+    /house\.rooms\.living\.rects\[0\] ligger uden for huset/);
+});
+
+test('rejects a bad room id and a room without rectangles', () => {
+  assert.throws(() => normalizeConfig(withHouse(h => { h.rooms['Stue!'] = { rects: [{ x0: 1, x1: 2, z0: 1, z1: 2 }] }; })),
+    /navnet må kun indeholde a–z, 0–9 og _/);
+  assert.throws(() => normalizeConfig(withHouse(h => { h.rooms.living.rects = []; })), /skal have mindst ét rektangel/);
+});
+
+test('rejects a bad fixture kind and a too-tall interior wall', () => {
+  assert.throws(() => normalizeConfig(withHouse(h => { h.fixtures[0].kind = 'sofa'; })), /kind skal være en af cabinet, counter/);
+  assert.throws(() => normalizeConfig(withHouse(h => { h.walls[0].h = 3; })), /house\.walls\[0\]\.h er højere end væggen/);
 });

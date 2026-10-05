@@ -2,6 +2,8 @@ const KINDS = ['window', 'door', 'garage-door'];
 const SURFACES = ['concrete', 'path', 'deck'];
 const QUALITIES = ['auto', 'high', 'medium', 'low'];
 const SIDES = ['north', 'south', 'west', 'east'];
+const FIXTURES = ['cabinet', 'counter'];
+const ROOM_ID = /^[a-z0-9_]+$/;
 
 export const DEFAULTS = Object.freeze({
   idle_timeout: 60,
@@ -36,6 +38,43 @@ export function validateHouse(h) {
 
   const shell = { wallHeight: 2.5, wallThickness: 0.4, ...(h.shell ?? fail('house.shell', 'mangler')) };
   for (const k of ['width', 'depth', 'wallHeight', 'wallThickness']) positive(shell[k], `house.shell.${k}`);
+
+  const rect = (o, path) => {
+    if (!o || typeof o !== 'object') fail(path, 'skal være et objekt');
+    range(o, 'x0', 'x1', path);
+    range(o, 'z0', 'z1', path);
+    if (o.x0 < 0 || o.x1 > shell.width || o.z0 < 0 || o.z1 > shell.depth) {
+      fail(path, `ligger uden for huset (0–${shell.width} × 0–${shell.depth})`);
+    }
+    return { x0: o.x0, x1: o.x1, z0: o.z0, z1: o.z1 };
+  };
+
+  const roomsIn = h.rooms ?? {};
+  if (typeof roomsIn !== 'object' || Array.isArray(roomsIn)) fail('house.rooms', 'skal være et objekt med rum');
+  const rooms = {};
+  for (const [id, room] of Object.entries(roomsIn)) {
+    const path = `house.rooms.${id}`;
+    if (!ROOM_ID.test(id)) fail(path, 'navnet må kun indeholde a–z, 0–9 og _');
+    if (!room || typeof room !== 'object') fail(path, 'skal være et objekt');
+    const rects = list(room.rects, `${path}.rects`).map((q, i) => rect(q, `${path}.rects[${i}]`));
+    if (!rects.length) fail(`${path}.rects`, 'skal have mindst ét rektangel');
+    rooms[id] = { rects };
+  }
+
+  const walls = list(h.walls, 'house.walls').map((w, i) => {
+    const path = `house.walls[${i}]`;
+    const r0 = rect(w, path);
+    const wh = positive(w.h ?? shell.wallHeight, `${path}.h`);
+    if (wh > shell.wallHeight) fail(`${path}.h`, `er højere end væggen (${shell.wallHeight})`);
+    return { ...r0, h: wh };
+  });
+
+  const fixtures = list(h.fixtures, 'house.fixtures').map((f, i) => {
+    const path = `house.fixtures[${i}]`;
+    const r0 = rect(f, path);
+    if (!FIXTURES.includes(f.kind)) fail(`${path}.kind`, `skal være en af ${FIXTURES.join(', ')}`);
+    return { ...r0, kind: f.kind, h: positive(f.h, `${path}.h`) };
+  });
 
   const r = h.roof ?? {};
   const roof = { pitch: 25, overhang: 0.35, gableOverhang: 0.2, ...r };
@@ -76,7 +115,8 @@ export function validateHouse(h) {
       if (!(o.head > sill)) fail(`${path}.head`, 'skal være større end sill');
       if (o.from < 0 || o.to > len) fail(path, `ligger uden for væggen (0–${len})`);
       if (o.head > shell.wallHeight) fail(`${path}.head`, `er højere end væggen (${shell.wallHeight})`);
-      return { from: o.from, to: o.to, sill, head: o.head, kind: o.kind, index };
+      if (o.room !== undefined && !Object.hasOwn(rooms, o.room)) fail(`${path}.room`, 'findes ikke i house.rooms');
+      return { from: o.from, to: o.to, sill, head: o.head, kind: o.kind, ...(o.room !== undefined ? { room: o.room } : {}), index };
     }).sort((a, b) => a.from - b.from);
     for (let i = 1; i < items.length; i++) {
       if (items[i].from < items[i - 1].to) {
@@ -103,7 +143,7 @@ export function validateHouse(h) {
     return { x0: g.x0, x1: g.x1, z0: g.z0, z1: g.z1, h: positive(g.h ?? 1.6, `${path}.h`) };
   });
 
-  return { plot: { x0: plot.x0, x1: plot.x1, z0: plot.z0, z1: plot.z1 }, shell, roof, openings, surfaces, hedges };
+  return { plot: { x0: plot.x0, x1: plot.x1, z0: plot.z0, z1: plot.z1 }, shell, roof, openings, surfaces, hedges, rooms, walls, fixtures };
 }
 
 export function normalizeConfig(raw) {
