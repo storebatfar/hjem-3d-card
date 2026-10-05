@@ -3,7 +3,7 @@ import * as THREE from 'three';
 const FLOOR_Y0 = 0.08, FLOOR_Y1 = 0.1;   // a thin overlay on the house floor slab
 const PICK_Y1 = 0.12;                     // pick at floor level: you tap the floor you see
 const FLASH_Y = 0.121;
-const FLOOR_GLOW = 0.55, GLASS_GLOW = 1.2, LIGHT_INTENSITY = 5, FLASH_PEAK = 0.45;
+const FLOOR_GLOW = 0.7, GLASS_GLOW = 1.2, LIGHT_INTENSITY = 4, FLASH_PEAK = 0.45;
 const BLACK = new THREE.Color(0x000000), WHITE = new THREE.Color(0xffffff);
 
 function rectBox(r, y0, y1) {
@@ -46,15 +46,16 @@ export function buildRooms(house, m, litRooms) {
     }
     entry.center = { x: cx / area, z: cz / area };
     if (isLit) {
-      const light = new THREE.PointLight(0xffffff, 0, Math.max(3, Math.hypot(maxX - minX, maxZ - minZ)), 1.5);
+      const light = new THREE.PointLight(0xffffff, 0, Math.max(3, Math.hypot(maxX - minX, maxZ - minZ)), 2);
       light.position.set(entry.center.x, house.shell.wallHeight - 0.4, entry.center.z);
+      light.userData.base = 0;
       group.add(light);
       entry.light = light;
       glass[id] = m.glass.clone();
     }
     rooms[id] = entry;
   }
-  return { group, rooms, glass, picks };
+  return { group, rooms, glass, picks, fade: 1 };
 }
 
 export function applyRoomGlow(handle, glows, preset) {
@@ -71,8 +72,18 @@ export function applyRoomGlow(handle, glows, preset) {
     gm.emissive.copy(on ? c : BLACK);
     gm.emissiveIntensity = GLASS_GLOW * level;
     entry.light.color.copy(on ? c : WHITE);
-    entry.light.intensity = LIGHT_INTENSITY * level;
+    const base = LIGHT_INTENSITY * level;
+    entry.light.userData.base = base;
+    entry.light.intensity = base * handle.fade;
     entry.light.visible = preset.roomLights;
+  }
+}
+
+export function applyRoomLightFade(handle, f) {
+  handle.fade = f;
+  for (const entry of Object.values(handle.rooms)) {
+    if (!entry.light) continue;
+    entry.light.intensity = entry.light.userData.base * f;
   }
 }
 

@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { validateHouse } from '../src/config.js';
 import { createMaterials } from '../src/scene/materials.js';
 import { buildScene, applyQuality } from '../src/scene/build.js';
-import { applyRoomGlow, applyFlash } from '../src/scene/rooms.js';
+import { applyRoomGlow, applyFlash, applyRoomLightFade } from '../src/scene/rooms.js';
 import { PRESETS } from '../src/quality.js';
 
 const house = validateHouse(JSON.parse(readFileSync(new URL('./fixtures/example-house.json', import.meta.url))));
@@ -86,4 +86,24 @@ test('dispose also releases glass materials of lit rooms without windows', () =>
   world.rooms.glass.bedroom.addEventListener('dispose', () => { disposed = true; });
   world.dispose();
   assert.equal(disposed, true);
+});
+
+test('applyRoomLightFade scales room lights while emissive glow stays unchanged', () => {
+  const { world } = make();
+  applyRoomGlow(world.rooms, { living: warm }, PRESETS.high);
+  const room = world.rooms.rooms.living;
+  const baseIntensity = room.light.intensity;
+  const baseEmissive = room.floorMat.emissiveIntensity;
+  assert.ok(baseIntensity > 0, 'light intensity starts non-zero');
+
+  applyRoomLightFade(world.rooms, 0);
+  assert.equal(room.light.intensity, 0, 'fade 0 -> intensity 0');
+  assert.equal(room.floorMat.emissiveIntensity, baseEmissive, 'emissive glow stays unchanged');
+
+  applyRoomLightFade(world.rooms, 1);
+  assert.equal(room.light.intensity, baseIntensity, 'fade 1 -> base intensity');
+  assert.equal(room.floorMat.emissiveIntensity, baseEmissive, 'emissive glow stays unchanged');
+
+  applyRoomLightFade(world.rooms, 0.5);
+  assert.ok(Math.abs(room.light.intensity - baseIntensity * 0.5) < 1e-9, 'fade 0.5 -> half intensity');
 });

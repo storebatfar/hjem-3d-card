@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { createMaterials } from './scene/materials.js';
 import { buildScene, applyQuality, applyRoof } from './scene/build.js';
-import { computeViews, viewAt, roofAt } from './view.js';
+import { computeViews, viewAt, roofAt, ease } from './view.js';
 import { createInteraction } from './interaction.js';
 import { createQuality } from './quality.js';
 import { roomGlows, watchedEntities, pickStates, statesChanged, flashTone } from './live/lights.js';
-import { applyRoomGlow, applyFlash } from './scene/rooms.js';
+import { applyRoomGlow, applyFlash, applyRoomLightFade } from './scene/rooms.js';
 
 export const stats = { liveViews: 0, frames: 0 };
 const FLASH_MS = 400;
@@ -128,13 +128,24 @@ export class View3D {
     this.ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
     this.raycaster.setFromCamera(this.ndc, this.camera);
     if (this.interaction.mode === 'plan') {
-      const roomHit = this.raycaster.intersectObjects(this.world.pickTargets.rooms, false)[0];
-      if (roomHit) {
-        const id = roomHit.object.userData.roomId;
+      const roomHits = this.raycaster.intersectObjects(this.world.pickTargets.rooms, false);
+      const blockerHits = this.raycaster.intersectObjects(this.world.pickTargets.blockers, false);
+      const allHits = [...roomHits, ...blockerHits].sort((a, b) => a.distance - b.distance);
+      if (allHits.length > 0 && allHits[0].object.userData.roomId) {
+        const id = allHits[0].object.userData.roomId;
         return this.config.rooms[id]?.light ? { kind: 'room', id } : { kind: 'house' };
       }
+      if (allHits.length > 0) return { kind: 'house' };
     }
     return this.raycaster.intersectObject(this.world.pickTargets.house, false).length ? { kind: 'house' } : { kind: 'empty' };
+  }
+
+  startFlash(id, now) {
+    if (this.flash && this.flash.id !== id) {
+      applyFlash(this.world.rooms, this.flash.id, 1, this.tone);
+    }
+    this.flash = { id, start: now };
+    applyFlash(this.world.rooms, id, 0.001, this.tone);
   }
 
   handleTap(x, y) {
@@ -144,7 +155,7 @@ export class View3D {
     this.interaction.tap(now, h.kind === 'room' ? 'object' : h.kind);
     if (inPlan && h.kind === 'room') {
       this.toggleRoom(h.id);
-      this.flash = { id: h.id, start: now };
+      this.startFlash(h.id, now);
     }
     this.requestRender();
   }
@@ -180,6 +191,7 @@ export class View3D {
     this.camera.lookAt(...v.target);
     this.camera.updateProjectionMatrix();
     applyRoof(this.world.roofGroup, this.materials, roofAt(t));
+    applyRoomLightFade(this.world.rooms, ease(t));
     stats.frames++;
     this.renderer.render(this.world.scene, this.camera);
   }
@@ -207,9 +219,17 @@ export class View3D {
       .catch(e => console.warn('hjem-3d-card: kunne ikke skifte', entity, e));
   }
 
-  debugTapAt(x, z) {
+  debugFlashes() {
+    const visible = [];
+    for (const [id, entry] of Object.entries(this.world.rooms.rooms)) {
+      if (entry.flashMeshes.some(m => m.visible)) visible.push(id);
+    }
+    return visible;
+  }
+
+  debugTapAt(x, z, y = 0.1) {
     if (!this.size.w) this.resize(true);
-    const v = new THREE.Vector3(x, 0.1, z).project(this.camera);
+    const v = new THREE.Vector3(x, y, z).project(this.camera);
     const r = this.canvas.getBoundingClientRect();
     this.handleTap(r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height);
   }
