@@ -4,8 +4,11 @@ import { buildScene, applyQuality, applyRoof } from './scene/build.js';
 import { computeViews, viewAt, roofAt } from './view.js';
 import { createInteraction } from './interaction.js';
 import { createQuality } from './quality.js';
+import { roomGlows, watchedEntities, pickStates, statesChanged, flashTone } from './live/lights.js';
+import { applyRoomGlow, applyFlash } from './scene/rooms.js';
 
-export const stats = { liveViews: 0 };
+export const stats = { liveViews: 0, frames: 0 };
+const FLASH_MS = 400;
 
 const TAP_MOVE_PX = 10;
 const TAP_MAX_MS = 600;
@@ -31,7 +34,14 @@ export class View3D {
       this.materials = createMaterials({
         makeCanvas: (w, h) => Object.assign(document.createElement('canvas'), { width: w, height: h }),
       });
-      this.world = buildScene(config.house, { materials: this.materials, quality: this.quality.preset });
+      const litRooms = Object.keys(config.rooms).filter(id => config.rooms[id].light);
+      this.world = buildScene(config.house, { materials: this.materials, quality: this.quality.preset, litRooms });
+      this.watched = watchedEntities(config);
+      this.prevStates = null;
+      this.hass = null;
+      this.glows = {};
+      this.tone = 'light';
+      this.flash = null;
       this.views = computeViews(config.house);
       this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
       this.interaction = createInteraction({ idleTimeoutMs: config.idle_timeout * 1000, now: performance.now() });
@@ -68,6 +78,7 @@ export class View3D {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, p.pixelRatio));
     this.renderer.shadowMap.type = p.soft ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
     applyQuality(this.world, p);
+    applyRoomGlow(this.world.rooms, this.glows, p);
     this.resize(true);
   }
 
@@ -116,11 +127,25 @@ export class View3D {
     const r = this.canvas.getBoundingClientRect();
     this.ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
     this.raycaster.setFromCamera(this.ndc, this.camera);
-    return this.raycaster.intersectObject(this.world.pickTargets.house, false).length ? 'house' : 'empty';
+    if (this.interaction.mode === 'plan') {
+      const roomHit = this.raycaster.intersectObjects(this.world.pickTargets.rooms, false)[0];
+      if (roomHit) {
+        const id = roomHit.object.userData.roomId;
+        return this.config.rooms[id]?.light ? { kind: 'room', id } : { kind: 'house' };
+      }
+    }
+    return this.raycaster.intersectObject(this.world.pickTargets.house, false).length ? { kind: 'house' } : { kind: 'empty' };
   }
 
   handleTap(x, y) {
-    this.interaction.tap(performance.now(), this.hit(x, y));
+    const now = performance.now();
+    const h = this.hit(x, y);
+    const inPlan = this.interaction.mode === 'plan';
+    this.interaction.tap(now, h.kind === 'room' ? 'object' : h.kind);
+    if (inPlan && h.kind === 'room') {
+      this.toggleRoom(h.id);
+      this.flash = { id: h.id, start: now };
+    }
     this.requestRender();
   }
 
@@ -134,9 +159,15 @@ export class View3D {
     const s = this.interaction.tick(now);
     if (s.animating && this.lastFrame && this.quality.sample(now - this.lastFrame)) this.applyPreset();
     this.lastFrame = s.animating ? now : 0;
+    let flashing = false;
+    if (this.flash) {
+      const phase = (now - this.flash.start) / FLASH_MS;
+      applyFlash(this.world.rooms, this.flash.id, phase, this.tone);
+      if (phase >= 1) this.flash = null; else flashing = true;
+    }
     this.draw(s.t);
     this.updateOverlay(s);
-    if (s.animating) this.requestRender();
+    if (s.animating || flashing) this.requestRender();
   }
 
   draw(t) {
@@ -149,12 +180,38 @@ export class View3D {
     this.camera.lookAt(...v.target);
     this.camera.updateProjectionMatrix();
     applyRoof(this.world.roofGroup, this.materials, roofAt(t));
+    stats.frames++;
     this.renderer.render(this.world.scene, this.camera);
   }
 
   updateOverlay(s) {
     if (!this.overlay) return;
     this.overlay.textContent = `${this.quality.level} · ${this.quality.median.toFixed(1)} ms · ${s.mode}`;
+  }
+
+  setHass(hass) {
+    this.hass = hass;
+    if (!statesChanged(this.prevStates, hass?.states, this.watched)) return;
+    this.prevStates = pickStates(hass?.states, this.watched);
+    this.glows = roomGlows(this.config.rooms, hass?.states);
+    applyRoomGlow(this.world.rooms, this.glows, this.quality.preset);
+    this.tone = flashTone(this.config.mode_entity ? hass?.states?.[this.config.mode_entity] : undefined);
+    this.requestRender();
+  }
+
+  toggleRoom(id) {
+    const entity = this.config.rooms[id]?.light;
+    if (!entity || typeof this.hass?.callService !== 'function') return;
+    Promise.resolve()
+      .then(() => this.hass.callService('light', 'toggle', {}, { entity_id: entity }))
+      .catch(e => console.warn('hjem-3d-card: kunne ikke skifte', entity, e));
+  }
+
+  debugTapAt(x, z) {
+    if (!this.size.w) this.resize(true);
+    const v = new THREE.Vector3(x, 0.1, z).project(this.camera);
+    const r = this.canvas.getBoundingClientRect();
+    this.handleTap(r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height);
   }
 
   debugJump(t) {

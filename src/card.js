@@ -36,7 +36,7 @@ class HjemCard extends HTMLElement {
     if (this.isConnected) this.mount();
   }
 
-  set hass(hass) { this._hass = hass; }
+  set hass(hass) { this._hass = hass; this.view?.setHass(hass); }
 
   getCardSize() { return 12; }
 
@@ -56,6 +56,7 @@ class HjemCard extends HTMLElement {
     }
     try {
       this.view = new View3D(stage, this.config);
+      if (this._hass) this.view.setHass(this._hass);
     } catch (e) {
       console.error('hjem-3d-card:', e);
       stage.innerHTML = '<div class="msg">Kunne ikke starte 3D-visningen.</div>';
@@ -68,6 +69,8 @@ class HjemCard extends HTMLElement {
   }
 
   debugJump(t) { this.view?.debugJump(t); }
+
+  debugTapAt(x, z) { this.view?.debugTapAt(x, z); }
 }
 
 if (!customElements.get('hjem-3d-card')) {

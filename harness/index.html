@@ -22,19 +22,46 @@
   const getJson = async url => { const r = await fetch(url); if (!r.ok) throw new Error(url); return r.json(); };
   const house = await getJson('private/house.json').catch(() => getJson('../test/fixtures/example-house.json'));
   const wrap = document.getElementById('wrap');
+  const roomIds = Object.keys(house.rooms || {});
+  const rooms = Object.fromEntries(roomIds.map(id => [id, { light: `light.${id}` }]));
+  const litParam = q.get('lit') === 'auto'
+    ? [roomIds[0] && `${roomIds[0]}:255,146,39:255`, roomIds[1] && `${roomIds[1]}:80,140,255:128`].filter(Boolean).join(';')
+    : (q.get('lit') || '');
+  const lit = Object.fromEntries(litParam.split(';').filter(Boolean).map(s => {
+    const [id, rgb, bri] = s.split(':');
+    return [id, { rgb: rgb.split(',').map(Number), bri: Number(bri) }];
+  }));
+  const states = Object.fromEntries(roomIds.map(id => [`light.${id}`, lit[id]
+    ? { entity_id: `light.${id}`, state: 'on', attributes: { rgb_color: lit[id].rgb, brightness: lit[id].bri } }
+    : { entity_id: `light.${id}`, state: 'off', attributes: {} }]));
+  states['input_select.mode'] = { entity_id: 'input_select.mode', state: q.get('mode') || 'Mørk', attributes: {} };
+  const calls = [];
+  const hass = { states, callService: async (d, s, data, target) => { calls.push(`${d}.${s}:${target?.entity_id}`); } };
   const card = document.createElement('hjem-3d-card');
-  const config = { type: 'custom:hjem-3d-card', house, debug: q.has('debug'), height: q.get('height') || '700px', quality: q.get('quality') || 'high' };
+  const config = { type: 'custom:hjem-3d-card', house, rooms, mode_entity: 'input_select.mode', debug: q.has('debug'), height: q.get('height') || '700px', quality: q.get('quality') || 'high' };
   card.setConfig(config);
-  card.hass = { states: {}, callService: async () => {} };
+  card.hass = hass;              // Review Focus 5: hass arrives before the card is attached
   wrap.appendChild(card);
   window.__card = card;
+  window.__calls = calls;
   if (q.has('leak')) {
     // Review Focus 1+2: re-config and remount many times; exactly one live view must remain.
     for (let i = 0; i < 20; i++) { card.setConfig({ ...config }); card.remove(); wrap.appendChild(card); }
   }
   if (q.has('t')) setTimeout(() => card.debugJump(Number(q.get('t'))), 300);
+  const center = id => { const r = house.rooms[id].rects[0]; return [(r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2]; };
+  const tapId = q.get('tap') === 'auto' ? roomIds[0] : q.get('tap');
+  const tapIdleId = q.get('tapidle') === 'auto' ? roomIds[0] : q.get('tapidle');
+  if (tapId) setTimeout(() => card.debugTapAt(...center(tapId)), 500);         // needs t=1 (plan)
+  if (tapIdleId) setTimeout(() => card.debugTapAt(...center(tapIdleId)), 500); // needs t=0 (idle)
+  let framesDelta = 'n/a';
+  if (q.has('churn')) setTimeout(() => {
+    const f0 = window.hjem3dStats.frames;
+    for (let i = 0; i < 100; i++) card.hass = { ...hass, states: { ...hass.states, 'sensor.churn': { state: String(i) } } };
+    setTimeout(() => { framesDelta = String(window.hjem3dStats.frames - f0); }, 300);
+  }, 900);
   setTimeout(() => {
     const liveGl = glContexts.filter(ctx => !ctx.isContextLost()).length;
-    document.title = `ready live=${window.hjem3dStats.liveViews} gl=${liveGl}`;
-  }, 800);
+    document.title = `ready live=${window.hjem3dStats.liveViews} gl=${liveGl} calls=${calls.join(',') || 'none'} framesDelta=${framesDelta}`;
+  }, 1400);
 </script></body></html>
