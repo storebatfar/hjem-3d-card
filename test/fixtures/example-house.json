@@ -1,0 +1,23 @@
+{
+  "plot": { "x0": -4, "x1": 16, "z0": -2, "z1": 12 },
+  "shell": { "width": 12, "depth": 8 },
+  "roof": {
+    "pitch": 30,
+    "solar": [{ "x0": 2, "x1": 6, "from": 1, "to": 3, "cols": 3, "rows": 2 }],
+    "windows": [{ "x0": 8, "x1": 8.8, "from": 1.2, "to": 2.2 }]
+  },
+  "openings": {
+    "north": [{ "from": 2, "to": 3.2, "sill": 0.9, "head": 2.1, "kind": "window" }],
+    "south": [
+      { "from": 4, "to": 6, "sill": 0.6, "head": 2.1, "kind": "window" },
+      { "from": 1, "to": 2, "sill": 0, "head": 2.1, "kind": "door" }
+    ],
+    "west": [{ "from": 2, "to": 4.4, "sill": 0, "head": 2.15, "kind": "garage-door" }],
+    "east": []
+  },
+  "surfaces": [
+    { "kind": "concrete", "x0": -4, "x1": 0, "z0": -1, "z1": 8 },
+    { "kind": "deck", "x0": 7, "x1": 12, "z0": 8, "z1": 11 }
+  ],
+  "hedges": [{ "x0": -4, "x1": 16, "z0": 11.4, "z1": 12, "h": 1.4 }]
+}
