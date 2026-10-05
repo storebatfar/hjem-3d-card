@@ -19,7 +19,7 @@ export function computeViews(house) {
   const planTarget = [shell.width / 2, 0, shell.depth / 2 + 0.9];
   return {
     idle: { target: idleTarget, pos: along(idleTarget, norm(IDLE_DIR), DIST), halfHeight: span * 0.36, minHalfWidth: span * 0.55 },
-    plan: { target: planTarget, pos: along(planTarget, norm(PLAN_DIR), DIST), halfHeight: shell.width * 0.375, minHalfWidth: shell.width * 0.56 },
+    plan: { target: planTarget, pos: along(planTarget, norm(PLAN_DIR), DIST), halfHeight: Math.max(shell.width * 0.375, shell.depth * 0.75), minHalfWidth: shell.width * 0.56 },
   };
 }
 

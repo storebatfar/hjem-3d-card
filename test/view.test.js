@@ -24,6 +24,17 @@ test('views aim at the plot centre (idle) and the house (plan)', () => {
   assert.ok(v.plan.halfHeight < v.idle.halfHeight, 'plan is zoomed in');
 });
 
+test('plan halfHeight fits both width and depth', () => {
+  // Example house (12 × 8): depth dominates
+  const v = computeViews(house);
+  close(v.plan.halfHeight, Math.max(12 * 0.375, 8 * 0.75));
+  close(v.plan.halfHeight, 6);
+  // Long house (23.69 × 8.51): width dominates
+  const longHouse = validateHouse({ plot: { x0: -9, x1: 27, z0: -3, z1: 17 }, shell: { width: 23.69, depth: 8.51 } });
+  const vLong = computeViews(longHouse);
+  close(vLong.plan.halfHeight, 23.69 * 0.375);
+});
+
 test('viewAt hits both end views exactly', () => {
   const v = computeViews(house);
   const a = viewAt(v, 0, 16 / 9), b = viewAt(v, 1, 16 / 9);
