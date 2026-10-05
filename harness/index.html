@@ -20,7 +20,10 @@
   const q = new URLSearchParams(location.search);
   document.body.className = q.get('bg') || 'dark';
   const getJson = async url => { const r = await fetch(url); if (!r.ok) throw new Error(url); return r.json(); };
-  const house = await getJson('private/house.json').catch(() => getJson('../test/fixtures/example-house.json'));
+  const houseParam = q.get('house');
+  const house = houseParam === 'example' ? await getJson('../test/fixtures/example-house.json')
+    : houseParam === 'private' ? await getJson('private/house.json')
+    : await getJson('private/house.json').catch(() => getJson('../test/fixtures/example-house.json'));
   const wrap = document.getElementById('wrap');
   const roomIds = Object.keys(house.rooms || {});
   const rooms = Object.fromEntries(roomIds.map(id => [id, { light: `light.${id}` }]));
