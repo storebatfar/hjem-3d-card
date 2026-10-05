@@ -73,7 +73,9 @@ export function validateHouse(h) {
     const path = `house.fixtures[${i}]`;
     const r0 = rect(f, path);
     if (!FIXTURES.includes(f.kind)) fail(`${path}.kind`, `skal være en af ${FIXTURES.join(', ')}`);
-    return { ...r0, kind: f.kind, h: positive(f.h, `${path}.h`) };
+    const fh = positive(f.h, `${path}.h`);
+    if (fh > shell.wallHeight - 0.08) fail(`${path}.h`, `er højere end væggen (${shell.wallHeight})`);
+    return { ...r0, kind: f.kind, h: fh };
   });
 
   const r = h.roof ?? {};
@@ -164,7 +166,7 @@ export function normalizeConfig(raw) {
     const v = rc ?? {};
     if (typeof v !== 'object' || Array.isArray(v)) fail(`rooms.${id}`, 'skal være et objekt');
     if (v.light !== undefined && !(typeof v.light === 'string' && /^light\.[a-z0-9_]+$/.test(v.light))) {
-      fail(`rooms.${id}.light`, 'skal være en light-entitet, fx light.stue');
+      fail(`rooms.${id}.light`, 'skal være en light-entitet, fx light.living_room');
     }
     cfg.rooms[id] = v.light ? { light: v.light } : {};
   }

@@ -85,7 +85,7 @@ test('normalizes rooms, interior walls and fixtures', () => {
   assert.deepEqual(h.rooms.living.rects, [{ x0: 0.4, x1: 7.0, z0: 0.4, z1: 7.6 }]);
   assert.equal(h.walls.length, 2);
   assert.equal(h.walls[0].h, 2.5);
-  assert.deepEqual(h.fixtures[0], { x0: 0.5, x1: 2.5, z0: 6.9, z1: 7.6, kind: 'counter', h: 0.9 });
+  assert.deepEqual(h.fixtures[0], { x0: 0.5, x1: 2.5, z0: 0.4, z1: 1.1, kind: 'counter', h: 0.9 });
 });
 
 test('keeps the room on openings that name one', () => {
@@ -120,6 +120,7 @@ test('rejects a bad room id and a room without rectangles', () => {
 test('rejects a bad fixture kind and a too-tall interior wall', () => {
   assert.throws(() => normalizeConfig(withHouse(h => { h.fixtures[0].kind = 'sofa'; })), /kind skal være en af cabinet, counter/);
   assert.throws(() => normalizeConfig(withHouse(h => { h.walls[0].h = 3; })), /house\.walls\[0\]\.h er højere end væggen/);
+  assert.throws(() => normalizeConfig(withHouse(h => { h.fixtures[0].h = 2.5; })), /house\.fixtures\[0\]\.h er højere end væggen/);
 });
 
 test('room lights and mode entity default to empty', () => {

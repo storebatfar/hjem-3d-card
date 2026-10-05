@@ -42,7 +42,10 @@ Example structure:
 - `plot`: `{ x0, x1, z0, z1 }` — plot boundaries
 - `shell`: `{ width, depth, wallHeight?, wallThickness? }` — building dimensions
 - `roof`: `{ pitch?, overhang?, gableOverhang?, solar: [...], windows: [...] }`
-- `openings`: `{ north: [...], south: [...], west: [...], east: [...] }` — each item: `{ kind, from, to, sill?, head }`
+- `openings`: `{ north: [...], south: [...], west: [...], east: [...] }` — each item: `{ kind, from, to, sill?, head, room? }`
+- `rooms`: `{ [id]: { rects: [{ x0, x1, z0, z1 }, ...] }, ... }` — floor rectangles per room
+- `walls`: `[{ x0, x1, z0, z1, h? }, ...]` — interior partitions
+- `fixtures`: `[{ kind, x0, x1, z0, z1, h }, ...]` — kind: `cabinet` | `counter`
 - `surfaces`: `[{ kind, x0, x1, z0, z1 }, ...]` — kind: `concrete` | `path` | `deck`
 - `hedges`: `[{ x0, x1, z0, z1, h? }, ...]`
 
