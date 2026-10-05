@@ -20,6 +20,20 @@ house: { ... }   # see test/fixtures/example-house.json for the format
 Options: `height` (CSS height, default `calc(100vh - 96px)`), `idle_timeout` (seconds, default 60),
 `quality` (`auto` | `high` | `medium` | `low`), `debug` (shows quality and frame time).
 
+### Rooms and lights
+Rooms come from the house description (`house.rooms`: floor rectangles per room id). Link a room to a Home Assistant
+light group with `rooms`; in the floor-plan view the room glows in the group's colour and brightness and a tap toggles it.
+
+```yaml
+rooms:
+  living_room: { light: light.living_room }
+  bedroom: {}            # drawn, but no light (not tappable)
+mode_entity: input_select.theme_mode   # tap flash turns dark when this is "Lys"
+```
+
+Optional house keys: `walls` (interior partitions: `x0,x1,z0,z1`, optional `h`), `fixtures` (`kind: cabinet|counter`,
+`x0,x1,z0,z1,h`) and `room` on an opening so its glass glows with that room.
+
 ## House format
 
 The `house:` object describes the plot, building shell, roof, openings (windows/doors), surfaces (deck/path), and hedges. Coordinates are in metres, with origin at the northwest outer corner; x extends east, z extends south. Openings along a wall are measured along x (north/south walls) or z (west/east walls) from the wall's start.

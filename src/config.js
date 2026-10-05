@@ -155,5 +155,24 @@ export function normalizeConfig(raw) {
   if (typeof cfg.height !== 'string' || !cfg.height.trim()) fail('height', 'skal være en CSS-højde, fx "720px"');
   cfg.debug = cfg.debug === true;
   cfg.house = validateHouse(raw.house);
+
+  const roomsCfg = raw.rooms ?? {};
+  if (typeof roomsCfg !== 'object' || Array.isArray(roomsCfg)) fail('rooms', 'skal være et objekt');
+  cfg.rooms = {};
+  for (const [id, rc] of Object.entries(roomsCfg)) {
+    if (!Object.hasOwn(cfg.house.rooms, id)) fail(`rooms.${id}`, 'findes ikke i house.rooms');
+    const v = rc ?? {};
+    if (typeof v !== 'object' || Array.isArray(v)) fail(`rooms.${id}`, 'skal være et objekt');
+    if (v.light !== undefined && !(typeof v.light === 'string' && /^light\.[a-z0-9_]+$/.test(v.light))) {
+      fail(`rooms.${id}.light`, 'skal være en light-entitet, fx light.stue');
+    }
+    cfg.rooms[id] = v.light ? { light: v.light } : {};
+  }
+  if (raw.mode_entity !== undefined && raw.mode_entity !== null
+      && !(typeof raw.mode_entity === 'string' && /^[a-z_]+\.[a-z0-9_]+$/.test(raw.mode_entity))) {
+    fail('mode_entity', 'skal være en entitet, fx input_select.tema');
+  }
+  cfg.mode_entity = raw.mode_entity ?? null;
+
   return cfg;
 }

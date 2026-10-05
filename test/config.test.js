@@ -121,3 +121,26 @@ test('rejects a bad fixture kind and a too-tall interior wall', () => {
   assert.throws(() => normalizeConfig(withHouse(h => { h.fixtures[0].kind = 'sofa'; })), /kind skal være en af cabinet, counter/);
   assert.throws(() => normalizeConfig(withHouse(h => { h.walls[0].h = 3; })), /house\.walls\[0\]\.h er højere end væggen/);
 });
+
+test('room lights and mode entity default to empty', () => {
+  const c = normalizeConfig({ house: example() });
+  assert.deepEqual(c.rooms, {});
+  assert.equal(c.mode_entity, null);
+});
+
+test('normalizes room lights; a room without a light is allowed', () => {
+  const c = normalizeConfig({ house: example(), rooms: { living: { light: 'light.living' }, bedroom: null }, mode_entity: 'input_select.mode' });
+  assert.deepEqual(c.rooms, { living: { light: 'light.living' }, bedroom: {} });
+  assert.equal(c.mode_entity, 'input_select.mode');
+});
+
+test('rejects room lights for unknown rooms or non-light entities', () => {
+  assert.throws(() => normalizeConfig({ house: example(), rooms: { kitchen: { light: 'light.kitchen' } } }),
+    /rooms\.kitchen findes ikke i house\.rooms/);
+  assert.throws(() => normalizeConfig({ house: example(), rooms: { living: { light: 'switch.living' } } }),
+    /rooms\.living\.light skal være en light-entitet/);
+});
+
+test('rejects a malformed mode entity', () => {
+  assert.throws(() => normalizeConfig({ house: example(), mode_entity: 'Lys' }), /mode_entity skal være en entitet/);
+});
