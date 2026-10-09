@@ -9,6 +9,7 @@ SRV=$!
 trap 'kill $SRV' EXIT
 sleep 0.6
 mkdir -p harness/shots
+# Raised to 15000ms because the charging flow animation runs a 66ms timer continuously in headless
 FLAGS=(--headless=new --use-angle=swiftshader --enable-unsafe-swiftshader --hide-scrollbars --virtual-time-budget=15000)
 URL="http://127.0.0.1:8765/harness/index.html"
 shot() { "$CHROME" "${FLAGS[@]}" --window-size="$3" --screenshot="harness/shots/$1.png" "$URL?$2&house=$HOUSE" >/dev/null 2>&1; echo "harness/shots/$1.png"; }
@@ -28,7 +29,7 @@ shot idle-cars-dark   "t=0&bg=dark"               1340,740
 shot plan-away-dark   "t=1&bg=dark&car=away"      1340,740
 echo "tap in plan:      $(check 't=1&tap=auto')"
 echo "tap in idle:      $(check 't=0&tapidle=auto')"
-echo "hass churn:       $(check 't=0&churn=1')"   # idle: plan mode wakes once a second on purpose
+echo "hass churn:       $(check 't=0&churn=1&charge=none')"   # idle: plan mode wakes once a second on purpose
 echo "two quick taps:   $(check 't=1&tap2=auto')"
 echo "tap on a wall:    $(check 't=1&tapwall=auto')"
 echo "tap on a car:     $(check 't=1&tapcar=auto')"
