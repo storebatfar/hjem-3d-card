@@ -145,7 +145,43 @@ export function validateHouse(h) {
     return { x0: g.x0, x1: g.x1, z0: g.z0, z1: g.z1, h: positive(g.h ?? 1.6, `${path}.h`) };
   });
 
-  return { plot: { x0: plot.x0, x1: plot.x1, z0: plot.z0, z1: plot.z1 }, shell, roof, openings, surfaces, hedges, rooms, walls, fixtures };
+  const FACINGS = ['north', 'south', 'east', 'west'];
+  const inPlot = (x, z, path) => {
+    if (x < plot.x0 || x > plot.x1 || z < plot.z0 || z > plot.z1) fail(path, 'ligger uden for grunden');
+  };
+
+  const parkingIn = h.parking ?? {};
+  if (typeof parkingIn !== 'object' || Array.isArray(parkingIn)) fail('house.parking', 'skal være et objekt med pladser');
+  const parking = {};
+  for (const [id, p] of Object.entries(parkingIn)) {
+    const path = `house.parking.${id}`;
+    if (!ROOM_ID.test(id)) fail(path, 'navnet må kun indeholde a–z, 0–9 og _');
+    if (!p || typeof p !== 'object') fail(path, 'skal være et objekt');
+    num(p.x, `${path}.x`); num(p.z, `${path}.z`);
+    inPlot(p.x, p.z, path);
+    if (!FACINGS.includes(p.facing)) fail(`${path}.facing`, `skal være en af ${FACINGS.join(', ')}`);
+    parking[id] = { x: p.x, z: p.z, facing: p.facing };
+  }
+
+  let charger = null;
+  if (h.charger !== undefined && h.charger !== null) {
+    const c = h.charger, path = 'house.charger';
+    if (typeof c !== 'object' || Array.isArray(c)) fail(path, 'skal være et objekt');
+    num(c.x, `${path}.x`); num(c.y, `${path}.y`); num(c.z, `${path}.z`);
+    inPlot(c.x, c.z, path);
+    if (c.y < 0.3 || c.y > shell.wallHeight) fail(`${path}.y`, `skal være mellem 0.3 og ${shell.wallHeight}`);
+    if (!FACINGS.includes(c.facing)) fail(`${path}.facing`, `skal være en af ${FACINGS.join(', ')}`);
+    const route = list(c.route, `${path}.route`).map((w, i) => {
+      const p2 = `${path}.route[${i}]`;
+      if (!w || typeof w !== 'object') fail(p2, 'skal være et objekt');
+      num(w.x, `${p2}.x`); num(w.z, `${p2}.z`);
+      inPlot(w.x, w.z, p2);
+      return { x: w.x, z: w.z };
+    });
+    charger = { x: c.x, y: c.y, z: c.z, facing: c.facing, route };
+  }
+
+  return { plot: { x0: plot.x0, x1: plot.x1, z0: plot.z0, z1: plot.z1 }, shell, roof, openings, surfaces, hedges, rooms, walls, fixtures, parking, charger };
 }
 
 export function normalizeConfig(raw) {

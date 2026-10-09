@@ -145,3 +145,25 @@ test('rejects room lights for unknown rooms or non-light entities', () => {
 test('rejects a malformed mode entity', () => {
   assert.throws(() => normalizeConfig({ house: example(), mode_entity: 'Lys' }), /mode_entity skal være en entitet/);
 });
+
+test('parking and charger are normalized; both default to empty', () => {
+  const h = validateHouse(example());
+  assert.deepEqual(h.parking, { p1: { x: -0.8, z: 3.2, facing: 'west' } });
+  assert.deepEqual(h.charger, { x: 0.6, y: 1.2, z: 0, facing: 'north', route: [{ x: -0.4, z: -0.4 }] });
+  const raw = example(); delete raw.parking; delete raw.charger;
+  const h2 = validateHouse(raw);
+  assert.deepEqual(h2.parking, {}); assert.equal(h2.charger, null);
+});
+
+test('rejects bad parking spots', () => {
+  assert.throws(() => normalizeConfig(withHouse(h => { h.parking.p1.facing = 'up'; })), /house\.parking\.p1\.facing skal være en af north, south, east, west/);
+  assert.throws(() => normalizeConfig(withHouse(h => { h.parking.p1.x = -30; })), /house\.parking\.p1 ligger uden for grunden/);
+  assert.throws(() => normalizeConfig(withHouse(h => { h.parking['P 1'] = { x: 0, z: 0, facing: 'west' }; })), /navnet må kun indeholde/);
+});
+
+test('rejects a bad charger', () => {
+  assert.throws(() => normalizeConfig(withHouse(h => { h.charger.y = 0.1; })), /house\.charger\.y skal være mellem 0\.3 og 2\.5/);
+  assert.throws(() => normalizeConfig(withHouse(h => { h.charger.facing = 'in'; })), /house\.charger\.facing skal være en af/);
+  assert.throws(() => normalizeConfig(withHouse(h => { h.charger.route = [{ x: 40, z: 0 }]; })), /house\.charger\.route\[0\] ligger uden for grunden/);
+  assert.throws(() => normalizeConfig(withHouse(h => { h.charger = 'wall'; })), /house\.charger skal være et objekt/);
+});
