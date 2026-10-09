@@ -167,3 +167,35 @@ test('rejects a bad charger', () => {
   assert.throws(() => normalizeConfig(withHouse(h => { h.charger.route = [{ x: 40, z: 0 }]; })), /house\.charger\.route\[0\] ligger uden for grunden/);
   assert.throws(() => normalizeConfig(withHouse(h => { h.charger = 'wall'; })), /house\.charger skal være et objekt/);
 });
+
+test('cars, charger and page entity default to empty', () => {
+  const c = normalizeConfig({ house: example() });
+  assert.deepEqual(c.cars, {});
+  assert.deepEqual(c.charger, { led: null });
+  assert.equal(c.page_entity, null);
+});
+
+test('normalizes a car with defaults and only the given entities', () => {
+  const c = normalizeConfig({ house: example(), page_entity: 'input_select.page',
+    cars: { car1: { spot: 'p1', tracker: 'device_tracker.car1', cable: 'binary_sensor.car1_cable' } },
+    charger: { led: 'light.charger_led' } });
+  assert.deepEqual(c.cars.car1, { spot: 'p1', model: 'model_y', color: '#c8c8c8', page: 'biler',
+    tracker: 'device_tracker.car1', cable: 'binary_sensor.car1_cable' });
+  assert.deepEqual(c.charger, { led: 'light.charger_led' });
+  assert.equal(c.page_entity, 'input_select.page');
+});
+
+test('rejects bad car config', () => {
+  const base = { house: example() };
+  assert.throws(() => normalizeConfig({ ...base, cars: { car1: { spot: 'p9' } } }), /cars\.car1\.spot findes ikke i house\.parking/);
+  assert.throws(() => normalizeConfig({ ...base, cars: { car1: { spot: 'p1', model: 'roadster' } } }), /cars\.car1\.model skal være en af model_y, model_3/);
+  assert.throws(() => normalizeConfig({ ...base, cars: { car1: { spot: 'p1', color: 'red' } } }), /cars\.car1\.color skal være en farve/);
+  assert.throws(() => normalizeConfig({ ...base, cars: { car1: { spot: 'p1', cable: 'switch.x' } } }), /cars\.car1\.cable skal være en entitet/);
+  assert.throws(() => normalizeConfig({ ...base, cars: { car1: { spot: 'p1' }, car2: { spot: 'p1' } } }), /cars\.car2\.spot er allerede brugt af cars\.car1/);
+});
+
+test('rejects a charger LED without a house charger and a bad page entity', () => {
+  const raw = example(); delete raw.charger;
+  assert.throws(() => normalizeConfig({ house: raw, charger: { led: 'light.x' } }), /charger kræver house\.charger/);
+  assert.throws(() => normalizeConfig({ house: example(), page_entity: 'sensor.page' }), /page_entity skal være en entitet/);
+});

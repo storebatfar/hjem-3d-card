@@ -212,5 +212,51 @@ export function normalizeConfig(raw) {
   }
   cfg.mode_entity = raw.mode_entity ?? null;
 
+  const entity = (v, re, path, example) => {
+    if (v === undefined || v === null) return undefined;
+    if (!(typeof v === 'string' && re.test(v))) fail(path, `skal være en entitet, fx ${example}`);
+    return v;
+  };
+  cfg.page_entity = entity(raw.page_entity, /^input_select\.[a-z0-9_]+$/, 'page_entity', 'input_select.side') ?? null;
+
+  const MODELS = ['model_y', 'model_3'];
+  const carsIn = raw.cars ?? {};
+  if (typeof carsIn !== 'object' || Array.isArray(carsIn)) fail('cars', 'skal være et objekt');
+  cfg.cars = {};
+  const spotOwner = {};
+  for (const [id, c] of Object.entries(carsIn)) {
+    const path = `cars.${id}`;
+    if (!/^[a-z0-9_]+$/.test(id)) fail(path, 'navnet må kun indeholde a–z, 0–9 og _');
+    if (!c || typeof c !== 'object' || Array.isArray(c)) fail(path, 'skal være et objekt');
+    if (!Object.hasOwn(cfg.house.parking, c.spot)) fail(`${path}.spot`, 'findes ikke i house.parking');
+    if (spotOwner[c.spot]) fail(`${path}.spot`, `er allerede brugt af cars.${spotOwner[c.spot]}`);
+    spotOwner[c.spot] = id;
+    const model = c.model ?? 'model_y';
+    if (!MODELS.includes(model)) fail(`${path}.model`, `skal være en af ${MODELS.join(', ')}`);
+    const color = c.color ?? '#c8c8c8';
+    if (typeof color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(color)) fail(`${path}.color`, 'skal være en farve som #a3161c');
+    const page = c.page ?? 'biler';
+    if (typeof page !== 'string' || !page.trim()) fail(`${path}.page`, 'skal være et sidenavn');
+    const car = { spot: c.spot, model, color, page };
+    const rules = {
+      tracker: [/^(device_tracker|person|binary_sensor)\.[a-z0-9_]+$/, 'device_tracker.bil'],
+      cable: [/^binary_sensor\.[a-z0-9_]+$/, 'binary_sensor.bil_kabel'],
+      charging: [/^binary_sensor\.[a-z0-9_]+$/, 'binary_sensor.bil_lader'],
+      battery: [/^sensor\.[a-z0-9_]+$/, 'sensor.bil_batteri'],
+    };
+    for (const [k, [re, ex]] of Object.entries(rules)) {
+      const v = entity(c[k], re, `${path}.${k}`, ex);
+      if (v) car[k] = v;
+    }
+    cfg.cars[id] = car;
+  }
+
+  const ch = raw.charger;
+  if (ch !== undefined && ch !== null) {
+    if (typeof ch !== 'object' || Array.isArray(ch)) fail('charger', 'skal være et objekt');
+    if (!cfg.house.charger) fail('charger', 'kræver house.charger');
+  }
+  cfg.charger = { led: entity(ch?.led, /^light\.[a-z0-9_]+$/, 'charger.led', 'light.ladeboks') ?? null };
+
   return cfg;
 }
