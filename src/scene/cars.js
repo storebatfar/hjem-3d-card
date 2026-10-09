@@ -127,9 +127,9 @@ export function buildCharger(house, m, { makeCanvas } = {}) {
   const led = new THREE.Mesh(new THREE.BoxGeometry(alongX ? 0.025 : 0.012, 0.2, alongX ? 0.012 : 0.025), ledMat);
   led.position.set(c.x + n[0] * 0.106, c.y, c.z + n[2] * 0.106);
   group.add(led);
-  const coil = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.025, 8, 24), m.cable);
+  const coil = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.04, 10, 28), m.cable);
   const side = alongX ? [1, 0, 0] : [0, 0, 1];
-  coil.position.set(c.x + n[0] * 0.08 + side[0] * 0.3, c.y - 0.1, c.z + n[2] * 0.08 + side[2] * 0.3);
+  coil.position.set(c.x + side[0] * 0.25, c.y - 0.16, c.z + side[2] * 0.25);
   if (!alongX) coil.rotation.y = Math.PI / 2;
   group.add(coil);
   const flowMat = new THREE.MeshBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0.95, depthWrite: false,
@@ -146,8 +146,13 @@ export function setCable(handle, targetId, port) {
   handle.target = targetId;
   handle.coil.visible = !targetId;
   if (!targetId || !port) return;
-  const curve = new THREE.CatmullRomCurve3(cableRoute(handle.charger, port).map(p => new THREE.Vector3(...p)), false, 'centripetal');
-  handle.cable = new THREE.Mesh(new THREE.TubeGeometry(curve, 96, 0.045, 8, false), handle.m.cable);
+  const initialCurve = new THREE.CatmullRomCurve3(cableRoute(handle.charger, port).map(p => new THREE.Vector3(...p)), false, 'centripetal');
+  const samples = initialCurve.getSpacedPoints(160);
+  const cableRadius = 0.045;
+  const minY = 0.03 + cableRadius;
+  for (const pt of samples) { if (pt.y < minY) pt.y = minY; }
+  const curve = new THREE.CatmullRomCurve3(samples, false, 'centripetal');
+  handle.cable = new THREE.Mesh(new THREE.TubeGeometry(curve, 96, cableRadius, 8, false), handle.m.cable);
   handle.cable.castShadow = true;
   handle.flow = new THREE.Mesh(new THREE.TubeGeometry(curve, 96, 0.056, 8, false), handle.flowMat);
   handle.flow.visible = false;

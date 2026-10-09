@@ -77,6 +77,37 @@ test('fitView with example house projects all points inside frame with balanced 
   }
 });
 
+test('plan view includes parking footprints', () => {
+  const v = computeViews(house);
+  const aspect = 1316 / 700;
+  const plan = fitView(v.plan.dir, v.plan.points, aspect, v.plan.margin);
+  const hhp = plan.halfHeight;
+  const hwp = hhp * aspect;
+
+  const fp = [plan.pos[0] - plan.target[0], plan.pos[1] - plan.target[1], plan.pos[2] - plan.target[2]];
+  const flp = Math.hypot(...fp);
+  fp[0] /= flp; fp[1] /= flp; fp[2] /= flp;
+  const rp = [fp[1] * 0 - fp[2] * 1, fp[2] * 0 - fp[0] * 0, fp[0] * 1 - fp[1] * 0];
+  const rlp = Math.hypot(...rp);
+  rp[0] /= rlp; rp[1] /= rlp; rp[2] /= rlp;
+  const up = [rp[1] * fp[2] - rp[2] * fp[1], rp[2] * fp[0] - rp[0] * fp[2], rp[0] * fp[1] - rp[1] * fp[0]];
+
+  // Example house has parking spot p1 at x=-0.8, z=3.2, facing west
+  // Footprint: rear (-0.8, 3.2) to front (-5.6, 3.2), width ±1.0 in z
+  const parkingFootprint = [
+    [-0.8, 0, 2.2], [-0.8, 1.6, 2.2], [-0.8, 0, 4.2], [-0.8, 1.6, 4.2],
+    [-5.6, 0, 2.2], [-5.6, 1.6, 2.2], [-5.6, 0, 4.2], [-5.6, 1.6, 4.2],
+  ];
+
+  for (const p of parkingFootprint) {
+    const rel = [p[0] - plan.target[0], p[1] - plan.target[1], p[2] - plan.target[2]];
+    const pR = rel[0] * rp[0] + rel[1] * rp[1] + rel[2] * rp[2];
+    const pU = rel[0] * up[0] + rel[1] * up[1] + rel[2] * up[2];
+    assert.ok(pR >= -hwp && pR <= hwp, `parking footprint point ${p} projects inside horizontal bounds`);
+    assert.ok(pU >= -hhp && pU <= hhp, `parking footprint point ${p} projects inside vertical bounds`);
+  }
+});
+
 test('fitView survives 0 / NaN / Infinity aspect', () => {
   const v = computeViews(house);
   for (const aspect of [0, NaN, Infinity]) {

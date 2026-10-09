@@ -68,6 +68,16 @@ test('applyCars hides away cars; the LED follows the light glow', () => {
   assert.equal(world.charger.ledMat.emissiveIntensity, 0);
 });
 
+test('cable stays on the ground: every vertex y ≥ 0.03', () => {
+  const world = make();
+  setCable(world.charger, 'car1', world.cars.cars.car1.port);
+  const pos = world.charger.cable.geometry.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i);
+    assert.ok(y >= 0.03, `vertex ${i} has y=${y}, should be ≥ 0.03`);
+  }
+});
+
 test('no cars and no charger is fine', () => {
   const raw = JSON.parse(readFileSync(new URL('./fixtures/example-house.json', import.meta.url))); delete raw.charger;
   const c = normalizeConfig({ house: raw });

@@ -65,6 +65,23 @@ export function computeViews(house) {
     [0, shell.wallHeight, 0], [shell.width, shell.wallHeight, 0], [0, shell.wallHeight, shell.depth], [shell.width, shell.wallHeight, shell.depth],
   ];
 
+  // Add parking spot footprints to plan view
+  if (house.parking) {
+    const dirMap = { west: [-1, 0], east: [1, 0], north: [0, -1], south: [0, 1] };
+    for (const spot of Object.values(house.parking)) {
+      const dir = dirMap[spot.facing];
+      const rearX = spot.x, rearZ = spot.z;
+      const frontX = rearX + dir[0] * 4.8, frontZ = rearZ + dir[1] * 4.8;
+      const sideX = dir[1], sideZ = -dir[0];  // perpendicular to facing
+      for (const alongX of [rearX, frontX]) for (const alongZ of [rearZ, frontZ]) {
+        for (const side of [-1, 1]) {
+          planPoints.push([alongX + sideX * side * 1.0, 0, alongZ + sideZ * side * 1.0]);
+          planPoints.push([alongX + sideX * side * 1.0, 1.6, alongZ + sideZ * side * 1.0]);
+        }
+      }
+    }
+  }
+
   return {
     idle: { dir: IDLE_DIR, points: idlePoints, margin: 1.04 },
     plan: { dir: PLAN_DIR, points: planPoints, margin: 1.06 },
