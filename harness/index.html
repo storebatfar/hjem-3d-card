@@ -38,10 +38,28 @@
     ? { entity_id: `light.${id}`, state: 'on', attributes: { rgb_color: lit[id].rgb, brightness: lit[id].bri } }
     : { entity_id: `light.${id}`, state: 'off', attributes: {} }]));
   states['input_select.mode'] = { entity_id: 'input_select.mode', state: q.get('mode') || 'Mørk', attributes: {} };
+  const spots = Object.keys(house.parking || {});
+  const carDefs = [
+    { id: 'car1', model: 'model_y', color: '#a3161c', battery: '72' },
+    { id: 'car2', model: 'model_3', color: '#f0f0ee', battery: '55' },
+  ].slice(0, spots.length);
+  const cars = Object.fromEntries(carDefs.map((c, i) => [c.id, { spot: spots[i], model: c.model, color: c.color,
+    tracker: `device_tracker.${c.id}`, cable: `binary_sensor.${c.id}_cable`, charging: `binary_sensor.${c.id}_charging`, battery: `sensor.${c.id}_battery` }]));
+  const charge = q.get('charge') || 'charging';            // none | cable | charging (applies to car1)
+  const away = q.get('car') === 'away';                    // car1 away
+  for (const c of carDefs) {
+    const first = c.id === 'car1';
+    states[`device_tracker.${c.id}`] = { state: first && away ? 'not_home' : 'home', attributes: {} };
+    states[`binary_sensor.${c.id}_cable`] = { state: first && charge !== 'none' ? 'on' : 'off', attributes: {} };
+    states[`binary_sensor.${c.id}_charging`] = { state: first && charge === 'charging' ? 'on' : 'off', attributes: {} };
+    states[`sensor.${c.id}_battery`] = { state: c.battery, attributes: {} };
+  }
+  states['light.charger_led'] = { state: 'on', attributes: { rgb_color: [0, 200, 80], brightness: 255 } };
+  states['input_select.page'] = { state: 'hjem-3d', attributes: {} };
   const calls = [];
   const hass = { states, callService: async (d, s, data, target) => { calls.push(`${d}.${s}:${target?.entity_id}`); } };
   const card = document.createElement('hjem-3d-card');
-  const config = { type: 'custom:hjem-3d-card', house, rooms, mode_entity: 'input_select.mode', debug: q.has('debug'), height: q.get('height') || '700px', quality: q.get('quality') || 'high' };
+  const config = { type: 'custom:hjem-3d-card', house, rooms, cars, charger: house.charger ? { led: 'light.charger_led' } : undefined, page_entity: 'input_select.page', mode_entity: 'input_select.mode', debug: q.has('debug'), height: q.get('height') || '700px', quality: q.get('quality') || 'high' };
   card.setConfig(config);
   card.hass = hass;              // Review Focus 5: hass arrives before the card is attached
   wrap.appendChild(card);
@@ -68,6 +86,13 @@
     const wh = w.h ?? (house.shell.wallHeight || 2.5);
     setTimeout(() => card.debugTapAt((w.x0 + w.x1) / 2, (w.z0 + w.z1) / 2, wh), 500);
   }
+  const carCentre = id => { const p = house.parking[cars[id].spot]; const d = { west: [-1, 0], east: [1, 0], north: [0, -1], south: [0, 1] }[p.facing];
+    return [p.x + d[0] * 2.3, p.z + d[1] * 2.3]; };
+  if (q.get('tapcar') === 'auto' && cars.car1) setTimeout(() => card.debugTapAt(...carCentre('car1'), 0.8), 500);
+  if (q.get('tapgrass') === 'auto') setTimeout(() => card.debugTapAt(house.plot.x1 - 1, house.plot.z1 - 1, 0.01), 500);
+  if (q.get('stopcharge') === '1' && cars.car1) setTimeout(() => {
+    card.hass = { ...hass, states: { ...hass.states, 'binary_sensor.car1_charging': { state: 'off', attributes: {} } } };
+  }, 600);
   let framesDelta = 'n/a', flashes = 'n/a';
   if (q.has('churn')) setTimeout(() => {
     const f0 = window.hjem3dStats.frames;
@@ -77,6 +102,6 @@
   setTimeout(() => {
     const liveGl = glContexts.filter(ctx => !ctx.isContextLost()).length;
     if (card.debugFlashes) flashes = card.debugFlashes().join(',') || 'none';
-    document.title = `ready live=${window.hjem3dStats.liveViews} gl=${liveGl} calls=${calls.join(',') || 'none'} framesDelta=${framesDelta} flashes=${flashes}`;
+    document.title = `ready live=${window.hjem3dStats.liveViews} gl=${liveGl} calls=${calls.join(',') || 'none'} framesDelta=${framesDelta} flashes=${flashes} mode=${card.debugState()?.mode} flow=${card.debugState()?.flow} cable=${card.debugState()?.cable}`;
   }, 1400);
 </script></body></html>

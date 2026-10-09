@@ -4,11 +4,14 @@ import { buildScene, applyQuality, applyRoof } from './scene/build.js';
 import { computeViews, viewAt, roofAt, ease } from './view.js';
 import { createInteraction } from './interaction.js';
 import { createQuality } from './quality.js';
-import { roomGlows, watchedEntities, pickStates, statesChanged, flashTone } from './live/lights.js';
+import { roomGlows, watchedEntities, pickStates, statesChanged, flashTone, lightGlow } from './live/lights.js';
 import { applyRoomGlow, applyFlash, applyRoomLightFade } from './scene/rooms.js';
+import { carStates, cableTarget, carEntities } from './live/cars.js';
+import { setCable, applyCars, applyFlow, applyChargerLed } from './scene/cars.js';
 
 export const stats = { liveViews: 0, frames: 0 };
 const FLASH_MS = 400;
+const FLOW_FRAME_MS = 66;   // ≈15 fps while a car charges
 
 const TAP_MOVE_PX = 10;
 const TAP_MAX_MS = 600;
@@ -31,17 +34,19 @@ export class View3D {
       Object.assign(this.canvas.style, { display: 'block', width: '100%', height: '100%', touchAction: 'manipulation' });
       container.appendChild(this.canvas);
 
-      this.materials = createMaterials({
-        makeCanvas: (w, h) => Object.assign(document.createElement('canvas'), { width: w, height: h }),
-      });
+      const makeCanvas = (w, h) => Object.assign(document.createElement('canvas'), { width: w, height: h });
+      this.materials = createMaterials({ makeCanvas });
       const litRooms = Object.keys(config.rooms).filter(id => config.rooms[id].light);
-      this.world = buildScene(config.house, { materials: this.materials, quality: this.quality.preset, litRooms });
-      this.watched = watchedEntities(config);
+      this.world = buildScene(config.house, { materials: this.materials, quality: this.quality.preset, litRooms, cars: config.cars, makeCanvas });
+      this.watched = [...new Set([...watchedEntities(config), ...carEntities(config)])];
       this.prevStates = null;
       this.hass = null;
       this.glows = {};
       this.tone = 'light';
       this.flash = null;
+      this.cableId = null;
+      this.flowOn = false;
+      this.flowTimer = 0;
       this.views = computeViews(config.house);
       this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
       this.interaction = createInteraction({ idleTimeoutMs: config.idle_timeout * 1000, now: performance.now() });
@@ -128,15 +133,15 @@ export class View3D {
     this.ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
     this.raycaster.setFromCamera(this.ndc, this.camera);
     if (this.interaction.mode === 'plan') {
-      const roomHits = this.raycaster.intersectObjects(this.world.pickTargets.rooms, false);
-      const blockerHits = this.raycaster.intersectObjects(this.world.pickTargets.blockers, false);
-      const allHits = [...roomHits, ...blockerHits].sort((a, b) => a.distance - b.distance);
-      if (allHits.length > 0 && allHits[0].object.userData.roomId) {
-        const id = allHits[0].object.userData.roomId;
-        return this.config.rooms[id]?.light ? { kind: 'room', id } : { kind: 'house' };
-      }
-      if (allHits.length > 0) return { kind: 'house' };
+      const targets = [...this.world.pickTargets.rooms, ...this.world.pickTargets.blockers, ...this.world.pickTargets.cars];
+      const nearest = this.raycaster.intersectObjects(targets, false)
+        .filter(h => !h.object.userData.carId || h.object.parent.visible)   // away cars don't catch taps
+        .sort((a, b) => a.distance - b.distance)[0];
+      const ud = nearest?.object.userData ?? {};
+      if (ud.roomId) return this.config.rooms[ud.roomId]?.light ? { kind: 'room', id: ud.roomId } : { kind: 'house' };
+      if (ud.carId) return { kind: 'car', id: ud.carId };
     }
+    // Lawn, driveway and other non-target hits fall through to the house box: outside it is "empty" → back to idle.
     return this.raycaster.intersectObject(this.world.pickTargets.house, false).length ? { kind: 'house' } : { kind: 'empty' };
   }
 
@@ -152,11 +157,12 @@ export class View3D {
     const now = performance.now();
     const h = this.hit(x, y);
     const inPlan = this.interaction.mode === 'plan';
-    this.interaction.tap(now, h.kind === 'room' ? 'object' : h.kind);
+    this.interaction.tap(now, h.kind === 'room' || h.kind === 'car' ? 'object' : h.kind);
     if (inPlan && h.kind === 'room') {
       this.toggleRoom(h.id);
       this.startFlash(h.id, now);
     }
+    if (inPlan && h.kind === 'car') this.selectPage(this.config.cars[h.id].page);
     this.requestRender();
   }
 
@@ -176,9 +182,13 @@ export class View3D {
       applyFlash(this.world.rooms, this.flash.id, phase, this.tone);
       if (phase >= 1) this.flash = null; else flashing = true;
     }
+    if (this.flowOn) applyFlow(this.world.charger, true, now / 1000);
     this.draw(s.t);
     this.updateOverlay(s);
     if (s.animating || flashing) this.requestRender();
+    else if (this.flowOn && !this.flowTimer) {
+      this.flowTimer = setTimeout(() => { this.flowTimer = 0; this.requestRender(); }, FLOW_FRAME_MS);
+    }
   }
 
   draw(t) {
@@ -208,6 +218,16 @@ export class View3D {
     this.glows = roomGlows(this.config.rooms, hass?.states);
     applyRoomGlow(this.world.rooms, this.glows, this.quality.preset);
     this.tone = flashTone(this.config.mode_entity ? hass?.states?.[this.config.mode_entity] : undefined);
+    const cs = carStates(this.config.cars, hass?.states);
+    applyCars(this.world.cars, cs);
+    if (this.world.charger) {
+      const target = cableTarget(cs);
+      setCable(this.world.charger, target, target ? this.world.cars.cars[target].port : null);
+      this.cableId = target;
+      this.flowOn = !!(target && cs[target].charging);
+      if (!this.flowOn) applyFlow(this.world.charger, false, 0);
+      if (this.config.charger.led) applyChargerLed(this.world.charger, lightGlow(hass?.states?.[this.config.charger.led]));
+    }
     this.requestRender();
   }
 
@@ -217,6 +237,18 @@ export class View3D {
     Promise.resolve()
       .then(() => this.hass.callService('light', 'toggle', {}, { entity_id: entity }))
       .catch(e => console.warn('hjem-3d-card: kunne ikke skifte', entity, e));
+  }
+
+  selectPage(option) {
+    const entity = this.config.page_entity;
+    if (!entity || typeof this.hass?.callService !== 'function') return;
+    Promise.resolve()
+      .then(() => this.hass.callService('input_select', 'select_option', { option }, { entity_id: entity }))
+      .catch(e => console.warn('hjem-3d-card: kunne ikke skifte side', option, e));
+  }
+
+  debugState() {
+    return { mode: this.interaction.mode, flow: this.flowOn ? 'on' : 'off', cable: this.cableId };
   }
 
   debugFlashes() {
@@ -246,6 +278,7 @@ export class View3D {
     this.disposed = true;
     cancelAnimationFrame(this.raf);
     clearInterval(this.timer);
+    clearTimeout(this.flowTimer);
     this.ro.disconnect();
     this.io.disconnect();
     document.removeEventListener('visibilitychange', this.onVisibility);
