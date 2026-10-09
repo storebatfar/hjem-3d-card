@@ -76,6 +76,7 @@ export function createMaterials({ makeCanvas } = {}) {
     const dashes = makeCanvas(64, 8), dg = dashes.getContext('2d');
     dg.fillStyle = 'rgba(61,220,132,1)'; dg.fillRect(0, 0, 32, 8);
     m.flowDashes = new THREE.CanvasTexture(dashes);
+    m.flowDashes.colorSpace = THREE.SRGBColorSpace;
     m.flowDashes.wrapS = m.flowDashes.wrapT = THREE.RepeatWrapping;
   }
   m.roofFade = [m.roofTile, m.roofEdge, m.gable, m.panel, m.roofWindow];
