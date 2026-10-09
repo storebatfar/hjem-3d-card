@@ -3,6 +3,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { wallBoxes, openingParts, roofGeometry, panelRects } from '../geometry.js';
 import { buildRooms, applyRoomQuality } from './rooms.js';
+import { buildCars, buildCharger } from './cars.js';
 
 const SIDES = ['north', 'south', 'west', 'east'];
 const ROOF_LIFT_CLEARANCE = 0.16; // slab thickness of each roof slope
@@ -88,7 +89,7 @@ function buildRoof(house, m) {
   return group;
 }
 
-export function buildScene(house, { materials: m, quality, litRooms = [] }) {
+export function buildScene(house, { materials: m, quality, litRooms = [], cars = {}, makeCanvas }) {
   const { plot, shell, roof } = house;
   const scene = new THREE.Scene();
   const statics = new THREE.Group();
@@ -137,6 +138,11 @@ export function buildScene(house, { materials: m, quality, litRooms = [] }) {
   scene.add(roofGroup);
   scene.add(rooms.group);
 
+  const carsHandle = buildCars(house, cars, m, { makeCanvas });
+  scene.add(carsHandle.group);
+  const charger = buildCharger(house, m, { makeCanvas });
+  if (charger) scene.add(charger.group);
+
   const pickHouse = new THREE.Mesh(new THREE.BoxGeometry(shell.width, shell.wallHeight, shell.depth), m.pick);
   pickHouse.position.set(shell.width / 2, shell.wallHeight / 2, shell.depth / 2);
   pickHouse.name = 'pick-house';
@@ -152,9 +158,9 @@ export function buildScene(house, { materials: m, quality, litRooms = [] }) {
   sun.shadow.normalBias = 0.02;
   scene.add(hemi, sun, sun.target);
   const world = {
-    scene, roofGroup, sun, hemi, rooms,
-    pickTargets: { house: pickHouse, rooms: rooms.picks, blockers: statics.children },
-    dispose: () => { disposeScene(scene); Object.values(rooms.glass).forEach(g => g.dispose()); },
+    scene, roofGroup, sun, hemi, rooms, cars: carsHandle, charger,
+    pickTargets: { house: pickHouse, rooms: rooms.picks, cars: carsHandle.picks, blockers: [...statics.children, ...(charger ? [charger.box] : [])] },
+    dispose: () => { disposeScene(scene); Object.values(rooms.glass).forEach(g => g.dispose()); charger?.flowMat.dispose(); },
   };
   applyQuality(world, quality);
   return world;

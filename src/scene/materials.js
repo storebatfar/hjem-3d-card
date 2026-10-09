@@ -33,6 +33,11 @@ export function createMaterials({ makeCanvas } = {}) {
     roofWindow: std(PALETTE.roofWindow, { transparent: true, roughness: 0.2 }),
     pick: new THREE.MeshBasicMaterial({ visible: false }),
     contactShadow: new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, depthWrite: false }),
+    carGlass: std(0x111418, { roughness: 0.1, metalness: 0.2 }),
+    tyre: std(0x15181c, { roughness: 0.8 }),
+    tailLight: std(0x6e0d10, { emissive: new THREE.Color(0x8a0f12), emissiveIntensity: 0.6 }),
+    charger: std(0xf4f4f2, { roughness: 0.5 }),
+    cable: std(0x111111, { roughness: 0.6 }),
   };
   if (makeCanvas) {
     const stripes = (w, h, base, line, every, thick, vertical) => {
@@ -67,6 +72,11 @@ export function createMaterials({ makeCanvas } = {}) {
     grad.addColorStop(1, 'rgba(0,0,0,0)');
     s.fillStyle = grad; s.fillRect(0, 0, 128, 128);
     m.contactShadow.map = new THREE.CanvasTexture(sh);
+
+    const dashes = makeCanvas(64, 8), dg = dashes.getContext('2d');
+    dg.fillStyle = 'rgba(61,220,132,1)'; dg.fillRect(0, 0, 32, 8);
+    m.flowDashes = new THREE.CanvasTexture(dashes);
+    m.flowDashes.wrapS = m.flowDashes.wrapT = THREE.RepeatWrapping;
   }
   m.roofFade = [m.roofTile, m.roofEdge, m.gable, m.panel, m.roofWindow];
   return m;
