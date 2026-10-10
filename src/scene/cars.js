@@ -17,7 +17,7 @@ const PORT_LOCAL = { x: 0.12, y: 0.86 };   // rear, driver side (−z)
 function extrudeProfile(points, width, bevel) {
   const shape = new THREE.Shape(points.map(([x, y]) => new THREE.Vector2(x, y)));
   const depth = Math.max(0.01, width - 2 * bevel);
-  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3 });
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelOffset: -bevel, bevelSegments: 3 });
   g.translate(0, 0, -depth / 2);
   return g;
 }
@@ -74,7 +74,7 @@ export function buildCars(house, configCars, m, { makeCanvas } = {}) {
     const spot = house.parking[c.spot];
     const { group: car, spec, paint } = buildCarModel(c.model, c.color, m);
     car.name = `car-${id}`;
-    car.position.set(spot.x, 0, spot.z);
+    car.position.set(spot.x, 0.03, spot.z);
     car.rotation.y = YAW[spot.facing];
     group.add(car);
     car.updateMatrixWorld(true);
@@ -129,7 +129,13 @@ export function buildCharger(house, m, { makeCanvas } = {}) {
   group.add(led);
   const coil = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.04, 10, 28), m.cable);
   const side = alongX ? [1, 0, 0] : [0, 0, 1];
-  coil.position.set(c.x + side[0] * 0.25, c.y - 0.16, c.z + side[2] * 0.25);
+  let sideSign = 1;
+  if (c.route && c.route.length > 0) {
+    const toWaypoint = [c.route[0].x - c.x, c.route[0].z - c.z];
+    const dot = side[0] * toWaypoint[0] + side[2] * toWaypoint[1];
+    if (dot < 0) sideSign = -1;
+  }
+  coil.position.set(c.x + n[0] * 0.06 + side[0] * sideSign * 0.25, c.y - 0.16, c.z + n[2] * 0.06 + side[2] * sideSign * 0.25);
   if (!alongX) coil.rotation.y = Math.PI / 2;
   group.add(coil);
   const flowMat = new THREE.MeshBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0.95, depthWrite: false,

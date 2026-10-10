@@ -40,8 +40,8 @@
   states['input_select.mode'] = { entity_id: 'input_select.mode', state: q.get('mode') || 'Mørk', attributes: {} };
   const spots = Object.keys(house.parking || {});
   const carDefs = [
-    { id: 'car1', model: 'model_y', color: '#a3161c', battery: '72' },
-    { id: 'car2', model: 'model_3', color: '#f0f0ee', battery: '55' },
+    { id: 'car1', model: 'model_y', color: '#2f5d8a', battery: '72' },
+    { id: 'car2', model: 'model_3', color: '#8a8f96', battery: '55' },
   ].slice(0, spots.length);
   const cars = Object.fromEntries(carDefs.map((c, i) => [c.id, { spot: spots[i], model: c.model, color: c.color,
     tracker: `device_tracker.${c.id}`, cable: `binary_sensor.${c.id}_cable`, charging: `binary_sensor.${c.id}_charging`, battery: `sensor.${c.id}_battery` }]));

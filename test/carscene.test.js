@@ -19,10 +19,10 @@ test('a backed-in car stands in its spot: rear at the spot, nose pointing west',
   const world = make();
   const car = world.cars.cars.car1.car;
   const box = new THREE.Box3().setFromObject(car);
-  assert.ok(Math.abs(box.max.x - (-0.8)) < 0.15, `rear near x=-0.8, got ${box.max.x}`);
-  assert.ok(Math.abs(box.min.x - (-0.8 - MODELS.model_3.length)) < 0.15, `front near x=${-0.8 - MODELS.model_3.length}, got ${box.min.x}`);
+  assert.ok(Math.abs(box.max.x - (-0.8)) < 0.03, `rear near x=-0.8, got ${box.max.x}`);
+  assert.ok(Math.abs(box.min.x - (-0.8 - MODELS.model_3.length)) < 0.03, `front near x=${-0.8 - MODELS.model_3.length}, got ${box.min.x}`);
   assert.ok(Math.abs((box.min.z + box.max.z) / 2 - 3.2) < 0.1, 'centred on z=3.2');
-  assert.ok(box.max.y < 1.6 && box.max.y > 1.3, `Model 3 height, got ${box.max.y}`);
+  assert.ok(box.max.y < 1.48, `Model 3 height ≤ 1.46, got ${box.max.y}`);
 });
 
 test('the charge port is at the rear, driver side (south when facing west)', () => {
