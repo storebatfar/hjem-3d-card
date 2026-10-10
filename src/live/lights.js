@@ -26,7 +26,8 @@ export function lightGlow(stateObj) {
   }
   if (stateObj.state !== 'on') return { on: false, unavailable: false, rgb: null, level: 0 };
   const a = stateObj.attributes ?? {};
-  const rgb = Array.isArray(a.rgb_color) ? a.rgb_color.map(clamp)
+  const validRgb = Array.isArray(a.rgb_color) && a.rgb_color.length === 3 && a.rgb_color.every(v => Number.isFinite(v));
+  const rgb = validRgb ? a.rgb_color.map(clamp)
     : typeof a.color_temp_kelvin === 'number' ? kelvinToRgb(a.color_temp_kelvin)
     : Array.isArray(a.hs_color) ? hsToRgb(a.hs_color)
     : kelvinToRgb(DEFAULT_KELVIN);

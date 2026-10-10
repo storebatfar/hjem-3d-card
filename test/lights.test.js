@@ -23,6 +23,10 @@ test('lightGlow prefers rgb_color, then kelvin, then hs, then a warm default', (
   assert.deepEqual(lightGlow({ state: 'on', attributes: {} }).rgb, kelvinToRgb(2700));
 });
 
+test('lightGlow validates rgb_color is an array of 3 finite numbers, else falls through', () => {
+  assert.deepEqual(lightGlow({ state: 'on', attributes: { rgb_color: [255, null, 0], color_temp_kelvin: 2000 } }).rgb, [255, 137, 14]);
+});
+
 test('lightGlow brightness: null → full, 0 → minimum, 128 → half', () => {
   assert.equal(lightGlow({ state: 'on', attributes: { brightness: null } }).level, 1);
   assert.equal(lightGlow({ state: 'on', attributes: { brightness: 0 } }).level, 0.05);
