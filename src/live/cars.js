@@ -42,7 +42,7 @@ const r3 = v => Math.round(v * 1e6) / 1e6;
 export function cableRoute(charger, port) {
   const n = NORMAL[charger.facing];
   const pts = [
-    [charger.x + n[0] * 0.1, charger.y - 0.2, charger.z + n[2] * 0.1],
+    [charger.x + n[0] * 0.1, charger.y - 0.13, charger.z + n[2] * 0.1],
     [charger.x + n[0] * 0.35, GROUND, charger.z + n[2] * 0.35],
     ...charger.route.map(w => [w.x, GROUND, w.z]),
     [port.x + port.normal[0] * 0.35, GROUND, port.z + port.normal[2] * 0.35],

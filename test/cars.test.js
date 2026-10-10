@@ -44,7 +44,7 @@ test('cableRoute: from the charger outlet, down, along the waypoints, up into th
   const charger = { x: 0.6, y: 1.2, z: 0, facing: 'north', route: [{ x: -0.4, z: -0.4 }] };
   const port = { x: -0.9, y: 0.86, z: 4.16, normal: [0, 0, 1] };
   const r = cableRoute(charger, port);
-  assert.deepEqual(r[0], [0.6, 1.0, -0.1]);
+  assert.deepEqual(r[0], [0.6, 1.07, -0.1]);
   assert.deepEqual(r[1], [0.6, 0.04, -0.35]);
   assert.deepEqual(r[2], [-0.4, 0.04, -0.4]);
   assert.deepEqual(r[r.length - 2], [-0.9, 0.04, 4.51]);
