@@ -30,6 +30,7 @@ export class View3D {
       this.renderer.setClearColor(0x000000, 0);
       this.renderer.outputColorSpace = THREE.SRGBColorSpace;
       this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.autoUpdate = false;
       this.canvas = this.renderer.domElement;
       Object.assign(this.canvas.style, { display: 'block', width: '100%', height: '100%', touchAction: 'manipulation' });
       container.appendChild(this.canvas);
@@ -84,6 +85,7 @@ export class View3D {
     this.renderer.shadowMap.type = p.soft ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
     applyQuality(this.world, p);
     applyRoomGlow(this.world.rooms, this.glows, p);
+    this.renderer.shadowMap.needsUpdate = true;
     this.resize(true);
   }
 
@@ -125,6 +127,7 @@ export class View3D {
     if (!force && w === this.size.w && h === this.size.h) return;
     this.size = { w, h };
     this.renderer.setSize(w, h, false);
+    this.renderer.shadowMap.needsUpdate = true;
     this.requestRender();
   }
 
@@ -183,6 +186,7 @@ export class View3D {
       if (phase >= 1) this.flash = null; else flashing = true;
     }
     if (this.flowOn) applyFlow(this.world.charger, true, now / 1000);
+    if (s.animating) this.renderer.shadowMap.needsUpdate = true;
     this.draw(s.t);
     this.updateOverlay(s);
     if (s.animating || flashing) this.requestRender();
@@ -203,6 +207,7 @@ export class View3D {
     applyRoof(this.world.roofGroup, this.materials, roofAt(t));
     applyRoomLightFade(this.world.rooms, ease(t));
     stats.frames++;
+    if (stats.frames === 1) this.renderer.shadowMap.needsUpdate = true;
     this.renderer.render(this.world.scene, this.camera);
   }
 
@@ -228,6 +233,7 @@ export class View3D {
       if (!this.flowOn) applyFlow(this.world.charger, false, 0);
       if (this.config.charger.led) applyChargerLed(this.world.charger, lightGlow(hass?.states?.[this.config.charger.led]));
     }
+    this.renderer.shadowMap.needsUpdate = true;
     this.requestRender();
   }
 
@@ -268,6 +274,7 @@ export class View3D {
 
   debugJump(t) {
     const s = this.interaction.jump(t, performance.now());
+    this.renderer.shadowMap.needsUpdate = true;
     this.resize(true);
     this.draw(s.t);
     this.updateOverlay(s);
