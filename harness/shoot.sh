@@ -27,10 +27,11 @@ check() { "$CHROME" "${FLAGS[@]}" --dump-dom "$URL?$1&house=$HOUSE" 2>/dev/null 
 shot plan-cars-dark   "t=1&bg=dark"               1340,740
 shot idle-cars-dark   "t=0&bg=dark"               1340,740
 shot plan-away-dark   "t=1&bg=dark&car=away"      1340,740
-echo "tap in plan:      $(check 't=1&tap=auto')"
-echo "tap in idle:      $(check 't=0&tapidle=auto')"
-echo "hass churn:       $(check 't=0&churn=1&charge=none')"   # idle: plan mode wakes once a second on purpose
-echo "two quick taps:   $(check 't=1&tap2=auto')"
+echo "tap in plan:          $(check 't=1&tap=auto')"
+echo "tap in idle:          $(check 't=0&tapidle=auto')"
+echo "hass churn:           $(check 't=0&churn=1&charge=none')"   # idle: plan mode wakes once a second on purpose
+echo "churn while charging: $(check 't=0&churn=1&charge=charging')"
+echo "two quick taps:       $(check 't=1&tap2=auto')"
 echo "tap on a wall:    $(check 't=1&tapwall=auto')"
 echo "tap on a car:     $(check 't=1&tapcar=auto')"
 echo "tap on grass:     $(check 't=1&tapgrass=auto')"

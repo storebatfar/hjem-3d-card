@@ -52,11 +52,15 @@ page_entity: input_select.page
 - `spot` (required): A parking spot from `house.parking`
 - `model` (default `model_y`): Car type — `model_y` or `model_3` (affects render size and proportions)
 - `color` (default `#c8c8c8`): Paint colour in hex format
-- `page` (default `biler`): Home Assistant page to open when the car is tapped; written to `page_entity`
-- `tracker`, `cable`, `charging`, `battery` (optional): Home Assistant entities for display state
-  - `cable` goes to the car's rear bumper where a charge port cable connects; use it for a car that is home and charging or connected
-  - `charger.led` controls the wall charger LED; requires `house.charger`
-  - `page_entity` opens a car's page by writing `select_option` service calls (must be `input_select`)
+- `page` (default `biler`): The `input_select` option to select on `page_entity` when the car is tapped
+- `tracker` (optional): A device tracker entity; when `unavailable`, `unknown`, or missing, the car remains visible (only explicit away states hide it)
+- `cable` (optional): A binary sensor entity; when `on`, a cable appears from the wall charger to the car's rear charge port
+- `charging` (optional): A binary sensor entity; when `on`, the cable shows animated flow and the card renders continuously at ~15 fps while visible
+- `battery` (optional): A numeric sensor entity; shows a battery percentage label above the car
+
+Car-related configuration:
+- `charger.led` (optional): Controls the wall charger LED colour and brightness; requires `house.charger`
+- `page_entity` (optional): An `input_select` entity; tapping a car writes a `select_option` service call to open the car's page
 
 See `test/fixtures/example-house.json` for a complete example.
 
@@ -74,5 +78,7 @@ Example structure:
 - `fixtures`: `[{ kind, x0, x1, z0, z1, h }, ...]` — kind: `cabinet` | `counter`
 - `surfaces`: `[{ kind, x0, x1, z0, z1 }, ...]` — kind: `concrete` | `path` | `deck`
 - `hedges`: `[{ x0, x1, z0, z1, h? }, ...]`
+- `parking`: `{ [id]: { x, z, facing } }` — rear-bumper centre on the ground + nose direction (`east` | `west` | `north` | `south`)
+- `charger`: `{ x, y, z, facing, route: [{x, z}] }` — wall point, centre height, outward wall direction, ground waypoints to the driveway
 
 See `test/fixtures/example-house.json` for a complete example.
